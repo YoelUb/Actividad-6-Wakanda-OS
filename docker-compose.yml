@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  postgres_db:
+    image: postgres:15-alpine
+    container_name: wakanda_db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: default_db
+    ports:
+      - "5432:5432"
+    volumes:
+
+      - ./init_databases.sql:/docker-entrypoint-initdb.d/init_databases.sql
+
+  # 2. Servicio de Tráfico
+  gestion_trafico:
+    build: ./gestion_trafico
+    container_name: ms_trafico
+    depends_on:
+      - postgres_db
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://admin:admin@postgres_db:5432/traffic_db
+    ports:
+      - "8001:8000"
