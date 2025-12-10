@@ -13,7 +13,6 @@ services:
     volumes:
       - ./init_databases.sql:/docker-entrypoint-initdb.d/init_databases.sql
 
-
   gestion_trafico:
     build:
       context: .
@@ -25,7 +24,6 @@ services:
       - DATABASE_URL=${DATABASE_URL_TRAFFIC}
     ports:
       - "8001:8000"
-
 
   gestion_energia:
     build:
@@ -39,12 +37,14 @@ services:
     ports:
       - "8002:8000"
 
-
   gateway_api:
     build: ./gateway_api
     container_name: ms_gateway
     depends_on:
       - gestion_trafico
       - gestion_energia
+    environment:
+      - TRAFFIC_SERVICE_URL=http://gestion_trafico:8000
+      - ENERGY_SERVICE_URL=http://gestion_energia:8000
     ports:
       - "8000:8000"

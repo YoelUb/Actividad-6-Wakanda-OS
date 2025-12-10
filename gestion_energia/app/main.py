@@ -1,16 +1,24 @@
+import os
 from fastapi import FastAPI, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
-from app.database import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
 from prometheus_client import make_asgi_app, Counter
+from wakanda_common import get_db_engine, get_db_session_maker
 
 app = FastAPI(title="Servicio de Energía Wakanda")
 
-# Métrica propia
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+engine = get_db_engine(DATABASE_URL)
+AsyncSessionLocal = get_db_session_maker(engine)
+
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        yield session
+
 ENERGY_REQUESTS = Counter('energy_requests_total', 'Peticiones al servicio de energía')
 metrics_app = make_asgi_app()
 app.mount("/metrics", metrics_app)
-
 
 @app.get("/energy/grid")
 async def get_grid_status(db: AsyncSession = Depends(get_db)):
@@ -32,3 +40,7 @@ async def get_grid_status(db: AsyncSession = Depends(get_db)):
         "load": "78%",
         "db_connection": db_status
     }
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
