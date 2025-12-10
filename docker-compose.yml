@@ -5,22 +5,39 @@ services:
     image: postgres:15-alpine
     container_name: wakanda_db
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: default_db
     ports:
       - "5432:5432"
     volumes:
-
       - ./init_databases.sql:/docker-entrypoint-initdb.d/init_databases.sql
 
-  # 2. Servicio de Tráfico
   gestion_trafico:
     build: ./gestion_trafico
     container_name: ms_trafico
     depends_on:
       - postgres_db
     environment:
-      - DATABASE_URL=postgresql+asyncpg://admin:admin@postgres_db:5432/traffic_db
+      - DATABASE_URL=${DATABASE_URL_TRAFFIC}
     ports:
       - "8001:8000"
+
+  gestion_energia:
+    build: ./gestion_energia
+    container_name: ms_energia
+    depends_on:
+      - postgres_db
+    environment:
+      - DATABASE_URL=${DATABASE_URL_ENERGY}
+    ports:
+      - "8002:8000"
+
+  gateway_api:
+    build: ./gateway_api
+    container_name: ms_gateway
+    depends_on:
+      - gestion_trafico
+      - gestion_energia
+    ports:
+      - "8000:8000"
