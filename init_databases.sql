@@ -1,0 +1,6 @@
+CREATE DATABASE traffic_db;
+CREATE DATABASE energy_db;
+CREATE DATABASE water_db;
+CREATE DATABASE waste_db;
+CREATE DATABASE security_db;
+CREATE DATABASE gateway_db;
