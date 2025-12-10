@@ -13,8 +13,11 @@ services:
     volumes:
       - ./init_databases.sql:/docker-entrypoint-initdb.d/init_databases.sql
 
+
   gestion_trafico:
-    build: ./gestion_trafico
+    build:
+      context: .
+      dockerfile: gestion_trafico/Dockerfile
     container_name: ms_trafico
     depends_on:
       - postgres_db
@@ -23,8 +26,11 @@ services:
     ports:
       - "8001:8000"
 
+
   gestion_energia:
-    build: ./gestion_energia
+    build:
+      context: .
+      dockerfile: gestion_energia/Dockerfile
     container_name: ms_energia
     depends_on:
       - postgres_db
@@ -32,6 +38,7 @@ services:
       - DATABASE_URL=${DATABASE_URL_ENERGY}
     ports:
       - "8002:8000"
+
 
   gateway_api:
     build: ./gateway_api
