@@ -3,6 +3,7 @@ import axios from 'axios'
 import "./HogwartsClub.css"
 
 const API_URL = "http://localhost:8000"
+const MAX_WIZARDS = 25
 
 function WizardCard({ char }) {
   let statusClass = "status-unknown"
@@ -69,9 +70,29 @@ export default function HogwartsClub({ onExit }) {
     }
   }
 
-  const handleInputChange = (e) => setCurrentId(e.target.value)
-  const handlePrev = () => setCurrentId(p => p > 1 ? Number(p) - 1 : 20)
-  const handleNext = () => setCurrentId(p => p < 25 ? Number(p) + 1 : 1)
+  const handleInputChange = (e) => {
+    const value = e.target.value
+    if (value === "") {
+      setCurrentId("")
+      return
+    }
+    const num = Math.max(1, Math.min(MAX_WIZARDS, Number(value)))
+    setCurrentId(num)
+  }
+
+  const handlePrev = () => {
+    setCurrentId((prev) => {
+      const current = prev === "" || isNaN(prev) ? 1 : Number(prev)
+      return current > 1 ? current - 1 : MAX_WIZARDS
+    })
+  }
+
+  const handleNext = () => {
+    setCurrentId((prev) => {
+      const current = prev === "" || isNaN(prev) ? 1 : Number(prev)
+      return current < MAX_WIZARDS ? current + 1 : 1
+    })
+  }
 
   return (
     <div className="wakanda-wrapper hogwarts-theme">
@@ -87,16 +108,25 @@ export default function HogwartsClub({ onExit }) {
         </header>
 
         <div className="control-panel">
-          <h3 className="panel-title">Búsqueda de Magos (ID 1-25)</h3>
+          <h3 className="panel-title">Búsqueda de Magos</h3>
           <div className="input-group">
             <button className="btn-control" onClick={handlePrev}>&lt;</button>
-            <input type="text" value={currentId} onChange={handleInputChange} placeholder="ID" />
+
+            <input
+              type="text"
+              value={currentId}
+              onChange={handleInputChange}
+              placeholder="ID"
+            />
+
+            <span className="limit-text">/ {MAX_WIZARDS}</span>
+
             <button className="btn-control" onClick={handleNext}>&gt;</button>
           </div>
         </div>
 
         <div className="featured-section">
-           {loading && <div className="porstal-loader">Revelando secretos...</div>}
+           {loading && <div className="portal-loader">Revelando secretos...</div>}
            {error && <div className="error-msg">{error}</div>}
            {singleChar && !loading && !error && (
              <div className="featured-card-wrapper">

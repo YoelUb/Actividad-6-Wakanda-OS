@@ -3,10 +3,9 @@ import axios from 'axios'
 import "./PokemonClub.css"
 
 const API_URL = "http://localhost:8000"
+const MAX_POKEMON = 1025
 
 function PokeCard({ char }) {
-  const typeClass = char.types ? `type-${char.types[0]}` : "type-unknown";
-
   const getIdFromUrl = (url) => {
     if (!url) return "";
     const parts = url.split("/");
@@ -26,7 +25,7 @@ function PokeCard({ char }) {
           <h2 className="rm-name" style={{textTransform: 'capitalize'}}>{char.name}</h2>
           <span className="rm-status">
             <span className={`rm-status-icon status-alive`} />
-            {char.types ? char.types.join(" / ") : "Scanning..."}
+            {char.types ? char.types.join(" / ") : `#${displayId}`}
           </span>
         </div>
 
@@ -68,23 +67,44 @@ export default function PokemonClub({ onExit }) {
       const res = await axios.get(`${API_URL}/pokemon/${id}`)
       setSingleChar(res.data)
     } catch {
-      setError("Señal perdida: Pokémon no registrado en la Pokédex.")
+      setError("Señal perdida: Pokémon no registrado.")
       setSingleChar(null)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleInputChange = (e) => setCurrentId(e.target.value)
-  const handlePrev = () => setCurrentId(p => p > 1 ? Number(p) - 1 : 151)
-  const handleNext = () => setCurrentId(p => p < 1000 ? Number(p) + 1 : 1)
+  const handleInputChange = (e) => {
+    const value = e.target.value
+    if (value === "") {
+      setCurrentId("")
+      return
+    }
+    // Lógica de límite: Si pone más del máximo, se queda en el máximo
+    const num = Math.max(1, Math.min(MAX_POKEMON, Number(value)))
+    setCurrentId(num)
+  }
+
+  const handlePrev = () => {
+    setCurrentId((prev) => {
+      const current = prev === "" || isNaN(prev) ? 1 : Number(prev)
+      return current > 1 ? current - 1 : MAX_POKEMON
+    })
+  }
+
+  const handleNext = () => {
+    setCurrentId((prev) => {
+      const current = prev === "" || isNaN(prev) ? 1 : Number(prev)
+      return current < MAX_POKEMON ? current + 1 : 1
+    })
+  }
 
   return (
     <div className="wakanda-wrapper poke-theme">
       <div className="rm-container">
         <header className="wakanda-header">
           <div>
-            <h1 className="marvel-title" style={{background: 'linear-gradient(90deg, #ffcb05, #3b4cca)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
+            <h1 className="marvel-title">
               POKÉ <span className="os-text">DEX</span>
             </h1>
             <p className="subtitle">Creature Analysis System</p>
@@ -93,20 +113,27 @@ export default function PokemonClub({ onExit }) {
         </header>
 
         <div className="control-panel">
-          <h3 className="panel-title" style={{color: '#ffcb05'}}>Selector de Especímenes</h3>
+          <h3 className="panel-title">Selector de Especímenes</h3>
           <div className="input-group">
             <button className="btn-control" onClick={handlePrev}>&lt;</button>
-            <input type="text" value={currentId} onChange={handleInputChange} placeholder="ID" />
+
+            <input
+              type="text"
+              value={currentId}
+              onChange={handleInputChange}
+              placeholder="ID"
+            />
+
+            <span className="limit-text">/ {MAX_POKEMON}</span>
+
             <button className="btn-control" onClick={handleNext}>&gt;</button>
           </div>
         </div>
 
         <div className="featured-section">
-           <div className="portal-particles">
-            <span style={{background: '#ffcb05', boxShadow: '0 0 10px #ffcb05'}}></span>
-           </div>
+           <div className="portal-particles"></div>
 
-           {loading && <div className="portal-loader" style={{color: '#ffcb05'}}>Analizando ADN...</div>}
+           {loading && <div className="portal-loader">Analizando ADN...</div>}
            {error && <div className="error-msg">{error}</div>}
            {singleChar && !loading && !error && (
              <div className="featured-card-wrapper">
