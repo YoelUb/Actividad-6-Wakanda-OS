@@ -48,3 +48,39 @@ services:
       - ENERGY_SERVICE_URL=http://gestion_energia:8000
     ports:
       - "8000:8000"
+
+  gestion_agua:
+    build:
+      context: .
+      dockerfile: gestion_agua/Dockerfile
+    container_name: ms_agua
+    depends_on:
+      - postgres_db
+    environment:
+      - DATABASE_URL=${DATABASE_URL_WATER}
+    ports:
+      - "8003:8000"
+
+  seguridad_vigilancia:
+    build:
+      context: .
+      dockerfile: seguridad_vigilancia/Dockerfile
+    container_name: ms_seguridad
+    depends_on:
+      - postgres_db
+    environment:
+      - DATABASE_URL=${DATABASE_URL_SECURITY}
+    ports:
+      - "8004:8000"
+
+  gestion_residuos:
+    build:
+      context: .
+      dockerfile: gestion_residuos/Dockerfile
+    container_name: ms_residuos
+    depends_on:
+      - postgres_db
+    environment:
+      - DATABASE_URL=${DATABASE_URL_WASTE}
+    ports:
+      - "8005:8000"
