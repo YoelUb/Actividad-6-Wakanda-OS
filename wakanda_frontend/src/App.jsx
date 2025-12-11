@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react'
-import axios from 'axios'
-import "./SecretClub.css"
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import './SecretClub.css';
 
-const API_URL = 'http://localhost:8000'
+const API_URL = 'http://localhost:8000';
 
 function CharacterCard({ char }) {
-  let statusClass = 'status-unknown'
-  if (char.status === 'Alive') statusClass = 'status-alive'
-  if (char.status === 'Dead') statusClass = 'status-dead'
+  let statusClass = 'status-unknown';
+  if (char.status === 'Alive') statusClass = 'status-alive';
+  if (char.status === 'Dead') statusClass = 'status-dead';
 
   return (
     <article className="rm-card">
@@ -34,79 +34,77 @@ function CharacterCard({ char }) {
         </div>
       </div>
     </article>
-  )
+  );
 }
 
 export default function SecretClub({ onExit }) {
-  const [singleChar, setSingleChar] = useState(null)
-  const [currentId, setCurrentId] = useState(1)
-  const [roster, setRoster] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
+  const [singleChar, setSingleChar] = useState(null);
+  const [currentId, setCurrentId] = useState(1);
+  const [roster, setRoster] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchRoster()
-  }, [])
+    const fetchRoster = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/secret-club/roster`);
+        setRoster(res.data.results);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchRoster();
+  }, []);
 
   useEffect(() => {
-    fetchCharacterById(currentId)
-  }, [currentId])
-
-  const fetchRoster = async () => {
-    try {
-      const res = await axios.get(`${API_URL}/secret-club/roster`)
-      setRoster(res.data.results)
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
-  const fetchCharacterById = async (id) => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await axios.get(`${API_URL}/secret-club/${id}`)
-      setSingleChar(res.data)
-    } catch (err) {
-      setError("Portal inestable: No se encontró el sujeto.")
-      setSingleChar(null)
-    } finally {
-      setLoading(false)
-    }
-  }
+    const fetchCharacterById = async (id) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await axios.get(`${API_URL}/secret-club/${id}`);
+        setSingleChar(res.data);
+      } catch (err) {
+        setError("Sujeto no encontrado en esta dimensión.");
+        setSingleChar(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCharacterById(currentId);
+  }, [currentId]);
 
   const handleInputChange = (e) => {
-    let val = parseInt(e.target.value)
-    if (isNaN(val)) val = 1
-    if (val < 1) val = 1
-    if (val > 826) val = 826
-    setCurrentId(val)
-  }
+    let val = parseInt(e.target.value);
+    if (isNaN(val)) val = 1;
+    if (val < 1) val = 1;
+    if (val > 826) val = 826;
+    setCurrentId(val);
+  };
 
   const handlePrev = () => {
-    setCurrentId(prev => prev > 1 ? prev - 1 : 826)
-  }
+    setCurrentId(prev => prev > 1 ? prev - 1 : 826);
+  };
 
   const handleNext = () => {
-    setCurrentId(prev => prev < 826 ? prev + 1 : 1)
-  }
+    setCurrentId(prev => prev < 826 ? prev + 1 : 1);
+  };
 
   return (
     <div className="wakanda-wrapper">
       <div className="rm-container">
 
         <header className="wakanda-header">
-          <div>
+          <div className="header-text">
             <h1 className="marvel-title">WAKANDA <span className="os-text">OS</span></h1>
-            <p className="subtitle">Classified Database // Sector 7G</p>
+            <p className="subtitle">CLASSIFIED ARCHIVES // RICK_AND_MORTY_DB</p>
           </div>
           <button className="rm-btn-exit" onClick={onExit}>
-            CERRAR SESIÓN
+            CERRAR SESIÓN 🔒
           </button>
         </header>
 
         <div className="control-panel">
-          <h3 className="panel-title">Selector Dimensional (Sujeto ID)</h3>
+          <h3 className="panel-title">SELECTOR DE SUJETO [ID 1-826]</h3>
           <div className="input-group">
             <button className="btn-control" onClick={handlePrev}>&lt;</button>
             <input
@@ -122,7 +120,7 @@ export default function SecretClub({ onExit }) {
         </div>
 
         <div className="featured-section">
-          {loading && <div className="portal-loader">Abriendo portal...</div>}
+          {loading && <div className="portal-loader">ABRIENDO PORTAL DIMENSIONAL...</div>}
           {error && <div className="error-msg">{error}</div>}
 
           {singleChar && !loading && !error && (
@@ -137,7 +135,7 @@ export default function SecretClub({ onExit }) {
         </div>
 
         <div className="divider">
-          <span>ÚLTIMAS INTERCEPCIONES (ROSTER)</span>
+          <span>BASE DE DATOS COMPLETA</span>
         </div>
 
         <div className="rm-grid">
@@ -147,5 +145,5 @@ export default function SecretClub({ onExit }) {
         </div>
       </div>
     </div>
-  )
+  );
 }
