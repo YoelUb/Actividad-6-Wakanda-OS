@@ -101,7 +101,7 @@ export default function SecretClub({ onExit }) {
   }
 
   return (
-    <div className="wakanda-wrapper">
+    <div className="wakanda-wrapper rick-theme">
       <div className="rm-container">
 
         <header className="wakanda-header">

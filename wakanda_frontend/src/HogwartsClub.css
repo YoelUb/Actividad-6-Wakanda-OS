@@ -11,15 +11,8 @@
   --hp-glow: 0 0 15px rgba(238, 186, 48, 0.3);
 }
 
-body {
+.hogwarts-theme.wakanda-wrapper {
   margin: 0;
-  background-color: var(--hp-dark);
-  font-family: 'Times New Roman', 'Cinzel', serif;
-  color: var(--hp-text-parchment);
-  overflow-x: hidden;
-}
-
-.wakanda-wrapper {
   min-height: 100vh;
   padding: 20px;
   padding-bottom: 60px;
@@ -30,10 +23,11 @@ body {
     radial-gradient(circle at 80% 70%, #0c0c1a 0%, transparent 50%),
     linear-gradient(180deg, #000000 0%, #1a0c0c 100%);
   position: relative;
+  font-family: 'Times New Roman', 'Cinzel', serif;
+  color: var(--hp-text-parchment);
 }
 
-/* Efecto de partículas mágicas */
-.wakanda-wrapper::before {
+.hogwarts-theme.wakanda-wrapper::before {
   content: "";
   position: absolute;
   top: 0;
@@ -54,7 +48,7 @@ body {
   50% { opacity: 0.4; }
 }
 
-.rm-container {
+.hogwarts-theme .rm-container {
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;
@@ -65,7 +59,7 @@ body {
   z-index: 1;
 }
 
-.wakanda-header {
+.hogwarts-theme .wakanda-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -81,7 +75,7 @@ body {
   overflow: hidden;
 }
 
-.wakanda-header::after {
+.hogwarts-theme .wakanda-header::after {
   content: "";
   position: absolute;
   top: 0;
@@ -97,7 +91,7 @@ body {
   100% { left: 100%; }
 }
 
-.marvel-title {
+.hogwarts-theme .marvel-title {
   font-size: clamp(2rem, 5vw, 3rem);
   font-weight: 900;
   margin: 0;
@@ -113,7 +107,7 @@ body {
   padding: 10px 0;
 }
 
-.marvel-title::after {
+.hogwarts-theme .marvel-title::after {
   content: "";
   position: absolute;
   bottom: 0;
@@ -123,13 +117,13 @@ body {
   background: linear-gradient(90deg, transparent, var(--hp-gold), transparent);
 }
 
-.os-text {
+.hogwarts-theme .os-text {
   color: var(--hp-red);
   -webkit-text-fill-color: var(--hp-red);
   text-shadow: 0 0 10px rgba(116, 0, 1, 0.5);
 }
 
-.subtitle {
+.hogwarts-theme .subtitle {
   color: #aaa;
   margin-top: 10px;
   font-style: italic;
@@ -138,7 +132,7 @@ body {
   font-family: 'Cinzel', serif;
 }
 
-.rm-btn-exit {
+.hogwarts-theme .rm-btn-exit {
   background: transparent;
   border: 2px solid var(--hp-gold);
   color: var(--hp-gold);
@@ -155,7 +149,7 @@ body {
   z-index: 1;
 }
 
-.rm-btn-exit::before {
+.hogwarts-theme .rm-btn-exit::before {
   content: "";
   position: absolute;
   top: 0;
@@ -167,17 +161,17 @@ body {
   z-index: -1;
 }
 
-.rm-btn-exit:hover {
+.hogwarts-theme .rm-btn-exit:hover {
   color: var(--hp-gold);
   border-color: var(--hp-red);
   box-shadow: 0 0 25px rgba(116, 0, 1, 0.8);
 }
 
-.rm-btn-exit:hover::before {
+.hogwarts-theme .rm-btn-exit:hover::before {
   left: 100%;
 }
 
-.control-panel {
+.hogwarts-theme .control-panel {
   background: rgba(20, 20, 20, 0.9);
   padding: 2rem;
   border-radius: 10px;
@@ -196,7 +190,7 @@ body {
   position: relative;
 }
 
-.control-panel::before {
+.hogwarts-theme .control-panel::before {
   content: "✦";
   position: absolute;
   top: -15px;
@@ -208,7 +202,7 @@ body {
   font-size: 1.5rem;
 }
 
-.panel-title {
+.hogwarts-theme .panel-title {
   margin: 0 0 20px 0;
   color: var(--hp-gold);
   text-transform: uppercase;
@@ -218,7 +212,7 @@ body {
   font-family: 'Cinzel', serif;
 }
 
-.input-group {
+.hogwarts-theme .input-group {
   display: flex;
   align-items: center;
   gap: 20px;
@@ -226,7 +220,7 @@ body {
   justify-content: center;
 }
 
-.input-group input {
+.hogwarts-theme .input-group input {
   background: #000;
   border: 2px solid var(--hp-gold);
   color: var(--hp-gold);
@@ -241,19 +235,19 @@ body {
   transition: all 0.3s;
 }
 
-.input-group input:focus {
+.hogwarts-theme .input-group input:focus {
   box-shadow: 0 0 20px rgba(238, 186, 48, 0.5);
   border-color: var(--hp-red);
 }
 
-.limit-text {
+.hogwarts-theme .limit-text {
   color: var(--hp-text-parchment);
   font-weight: bold;
   font-size: 1.2rem;
   font-family: 'Cinzel', serif;
 }
 
-.btn-control {
+.hogwarts-theme .btn-control {
   background: var(--hp-red);
   color: var(--hp-gold);
   border: 2px solid var(--hp-gold);
@@ -271,7 +265,7 @@ body {
   overflow: hidden;
 }
 
-.btn-control::before {
+.hogwarts-theme .btn-control::before {
   content: "";
   position: absolute;
   top: 50%;
@@ -284,23 +278,23 @@ body {
   transition: width 0.3s, height 0.3s;
 }
 
-.btn-control:hover {
+.hogwarts-theme .btn-control:hover {
   transform: scale(1.15);
   background: var(--hp-gold);
   color: var(--hp-red);
   box-shadow: 0 0 25px rgba(238, 186, 48, 0.7);
 }
 
-.btn-control:hover::before {
+.hogwarts-theme .btn-control:hover::before {
   width: 100%;
   height: 100%;
 }
 
-.btn-control:active {
+.hogwarts-theme .btn-control:active {
   transform: scale(0.95);
 }
 
-.featured-section {
+.hogwarts-theme .featured-section {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -310,7 +304,7 @@ body {
   padding: 20px;
 }
 
-.featured-section::before {
+.hogwarts-theme .featured-section::before {
   content: "";
   position: absolute;
   width: min(500px, 90vw);
@@ -326,22 +320,13 @@ body {
 }
 
 @keyframes magicPulse {
-  0% {
-    opacity: 0.3;
-    transform: scale(0.9) rotate(0deg);
-  }
-  50% {
-    opacity: 0.8;
-    transform: scale(1.1) rotate(180deg);
-  }
-  100% {
-    opacity: 0.3;
-    transform: scale(0.9) rotate(360deg);
-  }
+  0% { opacity: 0.3; transform: scale(0.9) rotate(0deg); }
+  50% { opacity: 0.8; transform: scale(1.1) rotate(180deg); }
+  100% { opacity: 0.3; transform: scale(0.9) rotate(360deg); }
 }
 
 /* Efecto de hechizos girando */
-.spell-ring {
+.hogwarts-theme .spell-ring {
   position: absolute;
   width: 400px;
   height: 400px;
@@ -356,7 +341,7 @@ body {
   100% { transform: rotate(360deg); }
 }
 
-.featured-card-wrapper {
+.hogwarts-theme .featured-card-wrapper {
   position: relative;
   z-index: 10;
   animation: fadeIn 1s ease-out;
@@ -367,17 +352,11 @@ body {
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(30px) scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(30px) scale(0.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.rm-card {
+.hogwarts-theme .rm-card {
   background: linear-gradient(145deg, var(--hp-card-bg), #1a1a1a);
   border: 3px solid var(--hp-red);
   border-radius: 10px;
@@ -397,26 +376,13 @@ body {
 }
 
 @keyframes conjureCard {
-  0% {
-    transform: scale(0) rotate(-15deg);
-    opacity: 0;
-    filter: blur(10px);
-  }
-  60% {
-    transform: scale(1.2) rotate(5deg);
-    opacity: 1;
-    filter: blur(0);
-  }
-  80% {
-    transform: scale(0.95) rotate(-2deg);
-  }
-  100% {
-    transform: scale(1) rotate(0deg);
-    opacity: 1;
-  }
+  0% { transform: scale(0) rotate(-15deg); opacity: 0; filter: blur(10px); }
+  60% { transform: scale(1.2) rotate(5deg); opacity: 1; filter: blur(0); }
+  80% { transform: scale(0.95) rotate(-2deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
 }
 
-.rm-card:hover {
+.hogwarts-theme .rm-card:hover {
   transform: translateY(-10px) rotateX(5deg);
   border-color: var(--hp-gold);
   box-shadow:
@@ -425,7 +391,7 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-.rm-card::before {
+.hogwarts-theme .rm-card::before {
   content: "";
   position: absolute;
   top: 0;
@@ -447,7 +413,7 @@ body {
   100% { background-position: 100% 100%, 100px 100px; }
 }
 
-.rm-img-wrapper {
+.hogwarts-theme .rm-img-wrapper {
   flex: 0 0 220px;
   overflow: hidden;
   border-right: 2px solid var(--hp-red);
@@ -459,7 +425,7 @@ body {
   z-index: 2;
 }
 
-.rm-img-wrapper::after {
+.hogwarts-theme .rm-img-wrapper::after {
   content: "";
   position: absolute;
   top: 0;
@@ -471,7 +437,7 @@ body {
     linear-gradient(to right, rgba(116,0,1,0.1), rgba(238,186,48,0.1));
 }
 
-.rm-card img {
+.hogwarts-theme .rm-card img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -483,21 +449,17 @@ body {
   z-index: 1;
 }
 
-.rm-card:hover img {
+.hogwarts-theme .rm-card:hover img {
   filter: sepia(20%) contrast(1.3) brightness(1);
   animation: float 3s ease-in-out infinite;
 }
 
 @keyframes float {
-  0%, 100% {
-    transform: translateY(0px) scale(1);
-  }
-  50% {
-    transform: translateY(-15px) scale(1.02);
-  }
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(-15px) scale(1.02); }
 }
 
-.rm-card-info {
+.hogwarts-theme .rm-card-info {
   padding: 1.8rem;
   display: flex;
   flex-direction: column;
@@ -509,7 +471,7 @@ body {
   background: linear-gradient(to right, rgba(44,35,35,0.9), rgba(26,26,26,0.9));
 }
 
-.rm-name {
+.hogwarts-theme .rm-name {
   font-size: 2rem;
   font-weight: 600;
   margin: 0;
@@ -521,7 +483,7 @@ body {
   padding-bottom: 10px;
 }
 
-.rm-name::after {
+.hogwarts-theme .rm-name::after {
   content: "";
   position: absolute;
   bottom: 0;
@@ -531,7 +493,7 @@ body {
   background: linear-gradient(90deg, transparent, var(--hp-gold), transparent);
 }
 
-.rm-status {
+.hogwarts-theme .rm-status {
   display: flex;
   align-items: center;
   font-size: 1.1rem;
@@ -541,7 +503,7 @@ body {
   font-family: 'Cinzel', serif;
 }
 
-.rm-status-icon {
+.hogwarts-theme .rm-status-icon {
   height: 10px;
   width: 10px;
   margin-right: 10px;
@@ -551,30 +513,24 @@ body {
 }
 
 @keyframes statusPulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.3);
-    opacity: 0.8;
-  }
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.8; }
 }
 
-.status-alive {
+.hogwarts-theme .status-alive {
   background: var(--hp-gold);
   box-shadow: 0 0 10px var(--hp-gold), 0 0 20px rgba(238, 186, 48, 0.5);
 }
-.status-dead {
+.hogwarts-theme .status-dead {
   background: #333;
   box-shadow: 0 0 10px #333;
 }
-.status-unknown {
+.hogwarts-theme .status-unknown {
   background: var(--hp-text-parchment);
   box-shadow: 0 0 10px var(--hp-text-parchment);
 }
 
-.rm-label {
+.hogwarts-theme .rm-label {
   color: #aaa;
   font-size: 0.9rem;
   font-weight: 500;
@@ -582,14 +538,14 @@ body {
   letter-spacing: 1.5px;
   font-family: 'Cinzel', serif;
 }
-.rm-value {
+.hogwarts-theme .rm-value {
   color: var(--hp-text-parchment);
   font-size: 1.1rem;
   font-weight: bold;
   font-family: 'Cinzel', serif;
 }
 
-.divider {
+.hogwarts-theme .divider {
   border-bottom: 2px solid var(--hp-red);
   margin: 3rem 0;
   text-align: center;
@@ -598,7 +554,7 @@ body {
   position: relative;
 }
 
-.divider::before {
+.hogwarts-theme .divider::before {
   content: "⚡";
   position: absolute;
   top: 50%;
@@ -610,7 +566,7 @@ body {
   color: var(--hp-gold);
 }
 
-.divider span {
+.hogwarts-theme .divider span {
   background: var(--hp-dark);
   padding: 0 25px;
   position: relative;
@@ -622,14 +578,14 @@ body {
   font-family: 'Cinzel', serif;
 }
 
-.rm-grid {
+.hogwarts-theme .rm-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 30px;
   width: 100%;
 }
 
-.portal-loader {
+.hogwarts-theme .portal-loader {
   color: var(--hp-gold);
   font-size: 2rem;
   animation: pulse 1.5s infinite alternate;
@@ -640,19 +596,11 @@ body {
 }
 
 @keyframes pulse {
-  0% {
-    opacity: 0.5;
-    transform: scale(0.95);
-    text-shadow: 0 0 5px var(--hp-gold);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1.05);
-    text-shadow: 0 0 20px var(--hp-gold), 0 0 30px var(--hp-red);
-  }
+  0% { opacity: 0.5; transform: scale(0.95); text-shadow: 0 0 5px var(--hp-gold); }
+  100% { opacity: 1; transform: scale(1.05); text-shadow: 0 0 20px var(--hp-gold), 0 0 30px var(--hp-red); }
 }
 
-.error-msg {
+.hogwarts-theme .error-msg {
   background: rgba(116,0,1,0.3);
   border: 2px solid var(--hp-red);
   color: #ff9999;
@@ -673,81 +621,81 @@ body {
 
 /* Responsividad completa */
 @media (max-width: 1024px) {
-  .rm-container {
+  .hogwarts-theme .rm-container {
     padding: 1.5rem;
   }
 
-  .rm-card {
+  .hogwarts-theme .rm-card {
     max-width: 90%;
   }
 
-  .rm-grid {
+  .hogwarts-theme .rm-grid {
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 25px;
   }
 }
 
 @media (max-width: 768px) {
-  .wakanda-wrapper {
+  .hogwarts-theme .wakanda-wrapper {
     padding: 15px;
   }
 
-  .wakanda-header {
+  .hogwarts-theme .wakanda-header {
     flex-direction: column;
     text-align: center;
     padding: 1rem;
   }
 
-  .marvel-title {
+  .hogwarts-theme .marvel-title {
     font-size: 2.2rem;
   }
 
-  .rm-btn-exit {
+  .hogwarts-theme .rm-btn-exit {
     width: 100%;
     max-width: 250px;
     margin-top: 10px;
   }
 
-  .control-panel {
+  .hogwarts-theme .control-panel {
     padding: 1.5rem;
     margin: 0 10px 3rem 10px;
   }
 
-  .input-group {
+  .hogwarts-theme .input-group {
     gap: 15px;
   }
 
-  .input-group input {
+  .hogwarts-theme .input-group input {
     width: 100px;
     font-size: 1.5rem;
   }
 
-  .btn-control {
+  .hogwarts-theme .btn-control {
     width: 50px;
     height: 50px;
     font-size: 1.5rem;
   }
 
-  .featured-section {
+  .hogwarts-theme .featured-section {
     min-height: 350px;
   }
 
-  .featured-section::before {
+  .hogwarts-theme .featured-section::before {
     width: 350px;
     height: 350px;
   }
 
-  .spell-ring {
+  .hogwarts-theme .spell-ring {
     width: 300px;
     height: 300px;
   }
 
-  .rm-card {
+  .hogwarts-theme .rm-card {
     flex-direction: column;
     max-width: 100%;
   }
 
-  .rm-img-wrapper {
+  .hogwarts-theme .rm-img-wrapper {
     width: 100%;
     height: 250px;
     border-right: none;
@@ -755,95 +703,95 @@ body {
     flex: none;
   }
 
-  .rm-grid {
+  .hogwarts-theme .rm-grid {
     grid-template-columns: 1fr;
     gap: 25px;
   }
 }
 
 @media (max-width: 480px) {
-  .wakanda-wrapper {
+  .hogwarts-theme .wakanda-wrapper {
     padding: 10px;
   }
 
-  .marvel-title {
+  .hogwarts-theme .marvel-title {
     font-size: 1.8rem;
     letter-spacing: 2px;
   }
 
-  .header-subtitle {
+  .hogwarts-theme .header-subtitle {
     font-size: 1rem;
   }
 
-  .panel-title {
+  .hogwarts-theme .panel-title {
     font-size: 1.3rem;
   }
 
-  .input-group {
+  .hogwarts-theme .input-group {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .input-group input {
+  .hogwarts-theme .input-group input {
     width: 100%;
     margin-bottom: 10px;
   }
 
-  .limit-text {
+  .hogwarts-theme .limit-text {
     text-align: center;
     width: 100%;
   }
 
-  .rm-img-wrapper {
+  .hogwarts-theme .rm-img-wrapper {
     height: 200px;
   }
 
-  .rm-card-info {
+  .hogwarts-theme .rm-card-info {
     padding: 1.2rem;
   }
 
-  .rm-name {
+  .hogwarts-theme .rm-name {
     font-size: 1.6rem;
   }
 
-  .divider span {
+  .hogwarts-theme .divider span {
     font-size: 1.1rem;
     padding: 0 15px;
   }
 
-  .rm-grid {
+  .hogwarts-theme .rm-grid {
     gap: 20px;
   }
 
-  .portal-loader {
+  .hogwarts-theme .portal-loader {
     font-size: 1.5rem;
     padding: 30px;
   }
 }
 
 @media (max-width: 360px) {
-  .marvel-title {
+  .hogwarts-theme .marvel-title {
     font-size: 1.6rem;
   }
 
-  .rm-btn-exit {
+  .hogwarts-theme .rm-btn-exit {
     padding: 10px 20px;
     font-size: 0.9rem;
   }
 
-  .rm-img-wrapper {
+  .hogwarts-theme .rm-img-wrapper {
     height: 180px;
   }
 
-  .rm-name {
+  .hogwarts-theme .rm-name {
     font-size: 1.4rem;
   }
 
-  .rm-label, .rm-value {
+  .hogwarts-theme .rm-label, .hogwarts-theme .rm-value {
     font-size: 0.9rem;
   }
 
-  .btn-control {
+  .hogwarts-theme .btn-control {
     width: 45px;
     height: 45px;
     font-size: 1.3rem;

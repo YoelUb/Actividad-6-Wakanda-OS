@@ -80,7 +80,7 @@ export default function PokemonClub({ onExit }) {
   const handleNext = () => setCurrentId(p => p < 1000 ? Number(p) + 1 : 1)
 
   return (
-    <div className="wakanda-wrapper">
+    <div className="wakanda-wrapper poke-theme">
       <div className="rm-container">
         <header className="wakanda-header">
           <div>

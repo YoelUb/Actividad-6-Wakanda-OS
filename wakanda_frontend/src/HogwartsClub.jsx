@@ -74,11 +74,11 @@ export default function HogwartsClub({ onExit }) {
   const handleNext = () => setCurrentId(p => p < 25 ? Number(p) + 1 : 1)
 
   return (
-    <div className="wakanda-wrapper">
+    <div className="wakanda-wrapper hogwarts-theme">
       <div className="rm-container">
         <header className="wakanda-header">
           <div>
-            <h1 className="marvel-title" style={{background: 'linear-gradient(90deg, #740001, #eeba30)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
+            <h1 className="marvel-title">
               HOGWARTS <span className="os-text">ARCHIVES</span>
             </h1>
             <p className="subtitle">Magical Law Enforcement Scanner</p>
@@ -87,7 +87,7 @@ export default function HogwartsClub({ onExit }) {
         </header>
 
         <div className="control-panel">
-          <h3 className="panel-title" style={{color: '#eeba30'}}>Búsqueda de Magos (ID 1-25)</h3>
+          <h3 className="panel-title">Búsqueda de Magos (ID 1-25)</h3>
           <div className="input-group">
             <button className="btn-control" onClick={handlePrev}>&lt;</button>
             <input type="text" value={currentId} onChange={handleInputChange} placeholder="ID" />
@@ -96,7 +96,7 @@ export default function HogwartsClub({ onExit }) {
         </div>
 
         <div className="featured-section">
-           {loading && <div className="portal-loader" style={{color: '#eeba30'}}>Revelando secretos...</div>}
+           {loading && <div className="porstal-loader">Revelando secretos...</div>}
            {error && <div className="error-msg">{error}</div>}
            {singleChar && !loading && !error && (
              <div className="featured-card-wrapper">

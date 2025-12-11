@@ -12,33 +12,32 @@
   --poke-dark-blue: #2a75bb;
 }
 
-body {
+.poke-theme.wakanda-wrapper {
   margin: 0;
-  background: linear-gradient(135deg, var(--poke-light-blue) 0%, #b5d4ff 100%);
+  background:
+    radial-gradient(circle at 10% 20%, rgba(255, 222, 0, 0.1) 0%, transparent 20%),
+    radial-gradient(circle at 90% 80%, rgba(59, 76, 202, 0.1) 0%, transparent 20%),
+    linear-gradient(135deg, var(--poke-light-blue) 0%, #b5d4ff 100%);
   font-family: 'Pokemon Solid', 'Arial Rounded MT Bold', sans-serif;
   overflow-x: hidden;
   min-height: 100vh;
-}
-
-.poke-wrapper {
-  min-height: 100vh;
   padding: 20px;
   padding-bottom: 60px;
-  overflow-x: hidden;
-  width: 100%;
   box-sizing: border-box;
-  background-image:
-    radial-gradient(circle at 10% 20%, rgba(255, 222, 0, 0.1) 0%, transparent 20%),
-    radial-gradient(circle at 90% 80%, rgba(59, 76, 202, 0.1) 0%, transparent 20%);
+  width: 100%;
+  color: var(--poke-black);
 }
 
-.poke-container {
+.poke-theme .rm-container {
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
+  position: relative;
+  z-index: 10;
 }
 
-.poke-header {
+/* Header */
+.poke-theme .wakanda-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -53,7 +52,7 @@ body {
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 }
 
-.poke-title {
+.poke-theme .marvel-title {
   font-size: clamp(2rem, 6vw, 3.5rem);
   font-weight: 900;
   margin: 0;
@@ -66,6 +65,9 @@ body {
   -webkit-text-stroke: 2px var(--poke-yellow);
   animation: titleGlow 2s infinite alternate;
   line-height: 1.2;
+  background: none;
+  -webkit-background-clip: border-box;
+  -webkit-text-fill-color: var(--poke-red);
 }
 
 @keyframes titleGlow {
@@ -73,7 +75,7 @@ body {
   100% { filter: drop-shadow(0 0 15px rgba(255, 222, 0, 0.7)); }
 }
 
-.header-subtitle {
+.poke-theme .subtitle {
   color: var(--poke-dark-blue);
   font-size: 1.2rem;
   margin-top: 5px;
@@ -81,7 +83,8 @@ body {
   text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
 }
 
-.poke-btn {
+/* Botón de Salir */
+.poke-theme .rm-btn-exit {
   background: linear-gradient(to bottom, var(--poke-red), #cc0000);
   color: var(--poke-white);
   border: 3px solid var(--poke-black);
@@ -99,19 +102,19 @@ body {
   overflow: hidden;
 }
 
-.poke-btn:hover {
+.poke-theme .rm-btn-exit:hover {
   transform: translateY(-3px);
   box-shadow: 0 8px 0 var(--poke-black), 0 0 20px rgba(255, 0, 0, 0.5);
   background: linear-gradient(to bottom, #ff1a1a, var(--poke-red));
 }
 
-.poke-btn:active {
+.poke-theme .rm-btn-exit:active {
   transform: translateY(1px);
   box-shadow: 0 2px 0 var(--poke-black);
 }
 
-/* Panel de Control Pokemon */
-.control-panel {
+/* Panel de Control */
+.poke-theme .control-panel {
   background: rgba(255, 255, 255, 0.95);
   border: 4px solid var(--poke-red);
   border-radius: 20px;
@@ -125,7 +128,7 @@ body {
   margin-right: auto;
 }
 
-.control-panel::before {
+.poke-theme .control-panel::before {
   content: "";
   position: absolute;
   top: -10px;
@@ -154,7 +157,7 @@ body {
   100% { transform: rotate(360deg); }
 }
 
-.panel-title {
+.poke-theme .panel-title {
   color: var(--poke-red);
   font-size: 1.8rem;
   margin-bottom: 20px;
@@ -163,7 +166,7 @@ body {
   text-shadow: 2px 2px 0 var(--poke-yellow);
 }
 
-.input-group {
+.poke-theme .input-group {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -171,7 +174,7 @@ body {
   flex-wrap: wrap;
 }
 
-.input-group input {
+.poke-theme .input-group input {
   background: var(--poke-white);
   border: 3px solid var(--poke-blue);
   border-radius: 10px;
@@ -185,20 +188,20 @@ body {
   font-family: 'Arial Rounded MT Bold', sans-serif;
 }
 
-.input-group input:focus {
+.poke-theme .input-group input:focus {
   outline: none;
   border-color: var(--poke-yellow);
   box-shadow: 0 0 15px rgba(255, 222, 0, 0.5);
 }
 
-.limit-text {
+.poke-theme .limit-text {
   color: var(--poke-dark-blue);
   font-weight: bold;
   font-size: 1.2rem;
   text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
 }
 
-.btn-control {
+.poke-theme .btn-control {
   background: linear-gradient(to bottom, var(--poke-yellow), #e6c700);
   color: var(--poke-black);
   border: 3px solid var(--poke-black);
@@ -217,7 +220,7 @@ body {
   overflow: hidden;
 }
 
-.btn-control::after {
+.poke-theme .btn-control::after {
   content: "";
   position: absolute;
   top: -50%;
@@ -234,17 +237,18 @@ body {
   100% { transform: translateX(100%) rotate(45deg); }
 }
 
-.btn-control:hover {
+.poke-theme .btn-control:hover {
   transform: scale(1.15);
   box-shadow: 0 6px 0 var(--poke-black), 0 0 20px rgba(255, 222, 0, 0.7);
 }
 
-.btn-control:active {
+.poke-theme .btn-control:active {
   transform: scale(0.95);
   box-shadow: 0 2px 0 var(--poke-black);
 }
 
-.featured-section {
+/* Sección Destacada */
+.poke-theme .featured-section {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -254,7 +258,7 @@ body {
   padding: 20px;
 }
 
-.featured-section::before {
+.poke-theme .featured-section::before {
   content: "";
   position: absolute;
   width: 300px;
@@ -266,7 +270,7 @@ body {
   opacity: 0.4;
 }
 
-.featured-section::after {
+.poke-theme .featured-section::after {
   content: "";
   position: absolute;
   width: 320px;
@@ -278,14 +282,8 @@ body {
 }
 
 @keyframes pokeballPulse {
-  0%, 100% {
-    transform: scale(0.8) rotate(0deg);
-    opacity: 0.3;
-  }
-  50% {
-    transform: scale(1.2) rotate(180deg);
-    opacity: 0.7;
-  }
+  0%, 100% { transform: scale(0.8) rotate(0deg); opacity: 0.3; }
+  50% { transform: scale(1.2) rotate(180deg); opacity: 0.7; }
 }
 
 @keyframes spin {
@@ -293,7 +291,7 @@ body {
   100% { transform: rotate(360deg); }
 }
 
-.featured-card-wrapper {
+.poke-theme .featured-card-wrapper {
   position: relative;
   z-index: 10;
   animation: popOut 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
@@ -301,23 +299,14 @@ body {
 }
 
 @keyframes popOut {
-  0% {
-    transform: scale(0) rotate(-180deg);
-    opacity: 0;
-  }
-  60% {
-    transform: scale(1.3) rotate(10deg);
-    opacity: 1;
-  }
-  80% {
-    transform: scale(0.9) rotate(-5deg);
-  }
-  100% {
-    transform: scale(1) rotate(0deg);
-  }
+  0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+  60% { transform: scale(1.3) rotate(10deg); opacity: 1; }
+  80% { transform: scale(0.9) rotate(-5deg); }
+  100% { transform: scale(1) rotate(0deg); }
 }
 
-.rm-card {
+/* Tarjetas */
+.poke-theme .rm-card {
   background: linear-gradient(145deg, var(--poke-card-bg), #ffffff);
   border: 5px solid var(--poke-red);
   border-radius: 20px;
@@ -334,7 +323,7 @@ body {
   transition: all 0.3s ease;
 }
 
-.rm-card:hover {
+.poke-theme .rm-card:hover {
   transform: translateY(-10px) rotateX(5deg);
   box-shadow:
     0 25px 50px rgba(0, 0, 0, 0.4),
@@ -343,7 +332,7 @@ body {
   border-color: var(--poke-yellow);
 }
 
-.rm-card::before {
+.poke-theme .rm-card::before {
   content: "";
   position: absolute;
   top: 0;
@@ -363,7 +352,7 @@ body {
   100% { background-position: 300% 0%; }
 }
 
-.rm-img-wrapper {
+.poke-theme .rm-img-wrapper {
   flex: 0 0 180px;
   overflow: hidden;
   border-right: 3px solid var(--poke-red);
@@ -374,7 +363,7 @@ body {
   justify-content: center;
 }
 
-.rm-img-wrapper::after {
+.poke-theme .rm-img-wrapper::after {
   content: "";
   position: absolute;
   top: 0;
@@ -386,7 +375,7 @@ body {
   opacity: 0.3;
 }
 
-.rm-card img {
+.poke-theme .rm-card img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -398,21 +387,17 @@ body {
   z-index: 2;
 }
 
-.rm-card:hover img {
+.poke-theme .rm-card:hover img {
   animation: float 2s ease-in-out infinite;
   filter: saturate(1.6) contrast(1.3) brightness(1.2);
 }
 
 @keyframes float {
-  0%, 100% {
-    transform: translateY(0px) scale(1);
-  }
-  50% {
-    transform: translateY(-15px) scale(1.05);
-  }
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(-15px) scale(1.05); }
 }
 
-.rm-card-info {
+.poke-theme .rm-card-info {
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -422,7 +407,7 @@ body {
   position: relative;
 }
 
-.rm-name {
+.poke-theme .rm-name {
   font-size: 1.8rem;
   font-weight: 700;
   margin: 0;
@@ -433,7 +418,7 @@ body {
   padding-bottom: 5px;
 }
 
-.rm-name::after {
+.poke-theme .rm-name::after {
   content: "";
   position: absolute;
   bottom: 0;
@@ -449,7 +434,7 @@ body {
   100% { width: 100%; }
 }
 
-.rm-status {
+.poke-theme .rm-status {
   display: flex;
   align-items: center;
   margin-top: 8px;
@@ -459,7 +444,7 @@ body {
   width: fit-content;
 }
 
-.rm-status-icon {
+.poke-theme .rm-status-icon {
   height: 12px;
   width: 12px;
   margin-right: 10px;
@@ -473,39 +458,41 @@ body {
   50% { transform: scale(1.3); opacity: 0.8; }
 }
 
-.status-alive {
+.poke-theme .status-alive {
   background: var(--poke-yellow);
   box-shadow: 0 0 10px var(--poke-yellow);
 }
-.status-dead {
+.poke-theme .status-dead {
   background: #666;
   box-shadow: 0 0 10px #666;
 }
-.status-unknown {
+.poke-theme .status-unknown {
   background: var(--poke-blue);
   box-shadow: 0 0 10px var(--poke-blue);
 }
 
-.rm-label {
+.poke-theme .rm-label {
   color: var(--poke-dark-blue);
   font-size: 14px;
   font-weight: bold;
   font-family: 'Arial Rounded MT Bold', sans-serif;
 }
-.rm-value {
+.poke-theme .rm-value {
   color: var(--poke-black);
   font-size: 16px;
   font-weight: bold;
   font-family: 'Arial Rounded MT Bold', sans-serif;
 }
 
-.poke-divider {
+/* Divider */
+.poke-theme .divider {
   text-align: center;
   margin: 40px 0;
   position: relative;
+  border: none;
 }
 
-.poke-divider span {
+.poke-theme .divider span {
   background: linear-gradient(135deg, var(--poke-light-blue), #b5d4ff);
   padding: 0 30px;
   font-size: 1.5rem;
@@ -517,7 +504,7 @@ body {
   text-shadow: 2px 2px 0 var(--poke-yellow);
 }
 
-.poke-divider::before {
+.poke-theme .divider::before {
   content: "";
   position: absolute;
   top: 50%;
@@ -532,14 +519,14 @@ body {
     transparent);
 }
 
-.poke-grid {
+.poke-theme .rm-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 30px;
   margin-bottom: 50px;
 }
 
-.poke-loader {
+.poke-theme .portal-loader {
   color: var(--poke-red);
   font-size: 2rem;
   font-weight: bold;
@@ -554,7 +541,7 @@ body {
   100% { transform: translateY(-20px) scale(1.1); }
 }
 
-.poke-error {
+.poke-theme .error-msg {
   background: rgba(255, 0, 0, 0.1);
   border: 3px solid var(--poke-red);
   color: var(--poke-red);
@@ -572,67 +559,68 @@ body {
   75% { transform: translateX(10px); }
 }
 
+/* Responsividad */
 @media (max-width: 768px) {
-  .poke-wrapper {
+  .poke-theme .wakanda-wrapper {
     padding: 15px;
   }
 
-  .poke-header {
+  .poke-theme .wakanda-header {
     flex-direction: column;
     text-align: center;
     padding: 15px;
   }
 
-  .poke-title {
+  .poke-theme .marvel-title {
     font-size: 2.2rem;
     -webkit-text-stroke: 1.5px var(--poke-yellow);
   }
 
-  .poke-btn {
+  .poke-theme .rm-btn-exit {
     padding: 10px 25px;
     font-size: 1rem;
   }
 
-  .control-panel {
+  .poke-theme .control-panel {
     padding: 20px;
     margin: 0 10px 3rem 10px;
   }
 
-  .input-group {
+  .poke-theme .input-group {
     gap: 10px;
   }
 
-  .input-group input {
+  .poke-theme .input-group input {
     width: 100px;
     font-size: 1.3rem;
   }
 
-  .btn-control {
+  .poke-theme .btn-control {
     width: 45px;
     height: 45px;
     font-size: 1.5rem;
   }
 
-  .featured-section {
+  .poke-theme .featured-section {
     min-height: 350px;
   }
 
-  .featured-section::before {
+  .poke-theme .featured-section::before {
     width: 250px;
     height: 250px;
   }
 
-  .featured-section::after {
+  .poke-theme .featured-section::after {
     width: 270px;
     height: 270px;
   }
 
-  .rm-card {
+  .poke-theme .rm-card {
     flex-direction: column;
     max-width: 90%;
   }
 
-  .rm-img-wrapper {
+  .poke-theme .rm-img-wrapper {
     width: 100%;
     height: 220px;
     border-right: none;
@@ -640,91 +628,91 @@ body {
     flex: none;
   }
 
-  .poke-grid {
+  .poke-theme .rm-grid {
     grid-template-columns: 1fr;
     gap: 25px;
   }
 }
 
 @media (max-width: 480px) {
-  .poke-title {
+  .poke-theme .marvel-title {
     font-size: 1.8rem;
     letter-spacing: 2px;
   }
 
-  .header-subtitle {
+  .poke-theme .subtitle {
     font-size: 1rem;
   }
 
-  .panel-title {
+  .poke-theme .panel-title {
     font-size: 1.5rem;
   }
 
-  .input-group {
+  .poke-theme .input-group {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .input-group input {
+  .poke-theme .input-group input {
     width: 100%;
     margin-bottom: 10px;
   }
 
-  .rm-card-info {
+  .poke-theme .rm-card-info {
     padding: 15px;
   }
 
-  .rm-name {
+  .poke-theme .rm-name {
     font-size: 1.5rem;
   }
 
-  .poke-divider span {
+  .poke-theme .divider span {
     font-size: 1.2rem;
     padding: 0 15px;
   }
 
-  .poke-grid {
+  .poke-theme .rm-grid {
     grid-template-columns: 1fr;
     gap: 20px;
   }
 
-  .poke-loader {
+  .poke-theme .portal-loader {
     font-size: 1.5rem;
   }
 }
 
 @media (max-width: 360px) {
-  .poke-wrapper {
+  .poke-theme .wakanda-wrapper {
     padding: 10px;
   }
 
-  .poke-title {
+  .poke-theme .marvel-title {
     font-size: 1.6rem;
     -webkit-text-stroke: 1px var(--poke-yellow);
   }
 
-  .poke-btn {
+  .poke-theme .rm-btn-exit {
     padding: 8px 20px;
     font-size: 0.9rem;
   }
 
-  .control-panel {
+  .poke-theme .control-panel {
     padding: 15px;
   }
 
-  .rm-img-wrapper {
+  .poke-theme .rm-img-wrapper {
     height: 180px;
   }
 
-  .rm-name {
+  .poke-theme .rm-name {
     font-size: 1.3rem;
   }
 
-  .rm-label, .rm-value {
+  .poke-theme .rm-label, .poke-theme .rm-value {
     font-size: 0.9rem;
   }
 
-  .btn-control {
+  .poke-theme .btn-control {
     width: 40px;
     height: 40px;
     font-size: 1.3rem;
