@@ -126,3 +126,21 @@ async def proxy_secret_club(member_id: int):
             }
         except httpx.RequestError:
             raise HTTPException(status_code=503, detail="No se pudo contactar con el Club Secreto")
+
+
+
+@app.get("/secret-club/roster")
+async def get_secret_club_roster():
+    """
+    Trae la lista completa de miembros (Paginada) para el Grid View.
+    """
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await fetch_from_service(SECRET_CLUB_BASE_URL, client)
+
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail="Error al obtener el listado del club")
+
+            return response.json()
+        except httpx.RequestError:
+            raise HTTPException(status_code=503, detail="El Club Secreto no responde")

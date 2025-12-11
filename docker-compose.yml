@@ -95,7 +95,7 @@ services:
       - "8000:8000"
   wakanda_frontend:
     build:
-      context: ./src/wakanda_frontend
+      context: ./wakanda_frontend
       dockerfile: Dockerfile
     container_name: wakanda_dashboard
     ports:
