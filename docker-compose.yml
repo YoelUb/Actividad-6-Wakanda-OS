@@ -61,10 +61,10 @@ services:
     ports:
       - "8003:8000"
 
-  seguridad_vigilancia:
+  gestion_vigilancia:
     build:
       context: .
-      dockerfile: seguridad_vigilancia/Dockerfile
+      dockerfile: gestion_vigilancia/Dockerfile
     container_name: ms_seguridad
     depends_on:
       - postgres_db

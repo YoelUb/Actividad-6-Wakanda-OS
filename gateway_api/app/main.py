@@ -2,6 +2,7 @@ import os
 import httpx
 from fastapi import FastAPI, HTTPException
 from .resilience import fetch_from_service
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Wakanda API Gateway")
 
@@ -11,6 +12,22 @@ WATER_SERVICE_URL = os.getenv("WATER_SERVICE_URL", "http://gestion_agua:8000")
 WASTE_SERVICE_URL = os.getenv("WASTE_SERVICE_URL", "http://gestion_residuos:8000")
 SECURITY_SERVICE_URL = os.getenv("SECURITY_SERVICE_URL", "http://seguridad_vigilancia:8000")
 SECRET_CLUB_BASE_URL = os.getenv("SECRET_CLUB_API_URL", "https://rickandmortyapi.com/api/character")
+
+origins = [
+
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "*"
+]
+
+app.add_middleware(
+
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
