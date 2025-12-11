@@ -93,3 +93,12 @@ services:
       - SECRET_CLUB_API_URL=${SECRET_CLUB_API_URL}
     ports:
       - "8000:8000"
+  wakanda_frontend:
+    build:
+      context: ./src/wakanda_frontend
+      dockerfile: Dockerfile
+    container_name: wakanda_dashboard
+    ports:
+      - "3000:80"
+    depends_on:
+      - gateway_api
