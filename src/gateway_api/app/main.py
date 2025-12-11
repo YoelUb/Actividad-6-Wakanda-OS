@@ -14,14 +14,12 @@ SECURITY_SERVICE_URL = os.getenv("SECURITY_SERVICE_URL", "http://seguridad_vigil
 SECRET_CLUB_BASE_URL = os.getenv("SECRET_CLUB_API_URL", "https://rickandmortyapi.com/api/character")
 
 origins = [
-
     "http://localhost:3000",
     "http://localhost:5173",
     "*"
 ]
 
 app.add_middleware(
-
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
@@ -122,11 +120,11 @@ async def proxy_secret_club(member_id: int):
                 "member_id": data.get("id"),
                 "alias": data.get("name"),
                 "status": data.get("status"),
-                "origin": data.get("origin", {}).get("name")
+                "origin": data.get("origin", {}).get("name"),
+                "image": data.get("image")
             }
         except httpx.RequestError:
             raise HTTPException(status_code=503, detail="No se pudo contactar con el Club Secreto")
-
 
 
 @app.get("/secret-club/roster")
