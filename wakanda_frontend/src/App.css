@@ -20,6 +20,10 @@ body {
     radial-gradient(circle at 10% 20%, rgba(189, 0, 255, 0.15) 0%, transparent 40%),
     radial-gradient(circle at 90% 80%, rgba(0, 234, 255, 0.15) 0%, transparent 40%);
   color: var(--text-main);
+  max-width: 1600px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .dashboard-header {
@@ -30,11 +34,12 @@ body {
   margin-bottom: 40px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding-bottom: 20px;
+  gap: 20px;
 }
 
 .logo-container h1 {
   margin: 0;
-  font-size: 2.5rem;
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
   background: linear-gradient(90deg, #fff, var(--neon-blue));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -57,6 +62,7 @@ body {
 .header-stats {
   display: flex;
   gap: 20px;
+  flex-wrap: wrap;
 }
 
 .stat-card {
@@ -65,6 +71,7 @@ body {
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   text-align: center;
+  flex: 1 1 auto;
 }
 
 .stat-value {
@@ -89,6 +96,7 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 25px;
   margin-bottom: 40px;
+  width: 100%;
 }
 
 .service-card {
@@ -103,11 +111,13 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 280px;
+  box-sizing: border-box;
 }
 
 .service-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  z-index: 2;
 }
 
 .traffic-theme { border-top: 3px solid #ff4757; }
@@ -128,6 +138,7 @@ body {
   background: rgba(255,255,255,0.1);
   width: 50px;
   height: 50px;
+  min-width: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -138,11 +149,13 @@ body {
   margin: 0;
   flex-grow: 1;
   font-size: 1.2rem;
+  word-break: break-word;
 }
 
 .status-dot {
   width: 10px;
   height: 10px;
+  min-width: 10px;
   border-radius: 50%;
 }
 .status-dot.success { background: #2ed573; box-shadow: 0 0 8px #2ed573; }
@@ -151,6 +164,7 @@ body {
 
 .card-body {
   flex-grow: 1;
+  width: 100%;
 }
 
 .data-row {
@@ -159,11 +173,24 @@ body {
   margin-bottom: 12px;
   border-bottom: 1px solid rgba(255,255,255,0.05);
   padding-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 5px;
 }
 
 .data-label { color: #aaa; }
-.data-value { font-weight: bold; }
+.data-value { font-weight: bold; text-align: right; }
 .db-status { font-size: 0.8rem; padding: 2px 8px; border-radius: 4px; background: rgba(255,255,255,0.1); }
+
+.data-raw pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 0.75rem;
+    background: rgba(0,0,0,0.3);
+    padding: 10px;
+    border-radius: 6px;
+    max-height: 150px;
+    overflow-y: auto;
+}
 
 .secret-club-card {
   background: linear-gradient(135deg, #2d0036 0%, #000 100%);
@@ -177,6 +204,7 @@ body {
   text-align: center;
   position: relative;
   overflow: hidden;
+  min-height: 280px;
 }
 
 .secret-club-card::before {
@@ -186,6 +214,7 @@ body {
   background: conic-gradient(transparent, var(--neon-purple), transparent 30%);
   animation: rotate 4s linear infinite;
   opacity: 0.1;
+  pointer-events: none;
 }
 
 .secret-header { z-index: 1; margin-bottom: 20px; }
@@ -198,6 +227,12 @@ body {
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 1px;
+}
+
+.login-form {
+  z-index: 10;
+  position: relative;
+  width: 100%;
 }
 
 .vibranium-btn {
@@ -213,11 +248,18 @@ body {
   letter-spacing: 1px;
   width: 100%;
   margin-top: 10px;
+  position: relative;
+  z-index: 10;
 }
 
 .vibranium-btn:hover {
   box-shadow: 0 0 20px rgba(189, 0, 255, 0.6);
   transform: scale(1.02);
+}
+
+.vibranium-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .vibranium-btn.secondary {
@@ -231,6 +273,7 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 60vh;
+  width: 100%;
 }
 
 .login-box {
@@ -238,13 +281,15 @@ body {
   padding: 40px;
   border-radius: 20px;
   border: 1px solid var(--neon-purple);
-  width: 100%;
+  width: 90%;
   max-width: 400px;
   text-align: center;
+  z-index: 10;
 }
 
 .password-input {
   width: 100%;
+  box-sizing: border-box;
   padding: 15px;
   margin: 20px 0;
   background: #1a1a1a;
@@ -258,181 +303,93 @@ body {
 
 .dashboard-footer {
   margin-top: 40px;
-  border-top: 1px solid rgba(255,255,255,0.1);
-  padding-top: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border-top: 1px solid var(--neon-blue);
+  border-radius: 12px 12px 0 0;
+  padding: 20px 30px;
   display: flex;
   justify-content: space-between;
-  color: #666;
+  align-items: center;
+  color: var(--text-main);
   font-size: 0.9rem;
+  flex-wrap: wrap;
+  gap: 15px;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 -5px 20px rgba(0, 234, 255, 0.05);
 }
 
-/* ANIMATIONS */
+.system-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.system-status-label {
+  color: #aaa;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+}
+
+.system-status-value.operational {
+  color: #2ed573;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(46, 213, 115, 0.5);
+  padding: 2px 8px;
+  border: 1px solid #2ed573;
+  border-radius: 4px;
+  background: rgba(46, 213, 115, 0.1);
+}
+
+.vibranium-pulse {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--neon-purple);
+  font-weight: 500;
+  letter-spacing: 1px;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--neon-purple);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--neon-purple), 0 0 20px var(--neon-purple);
+  animation: blink 1.5s infinite ease-in-out;
+}
+
 @keyframes spin { 100% { transform: rotate(360deg); } }
 @keyframes rotate { 100% { transform: rotate(360deg); } }
-@keyframes blink { 50% { opacity: 0.5; } }
+@keyframes blink {
+  0% { opacity: 0.5; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 0.5; transform: scale(0.9); }
+}
 
 @media (max-width: 768px) {
   .wakanda-dashboard {
-    padding: 15px;
+    padding: 10px;
   }
-
   .dashboard-header {
     flex-direction: column;
     text-align: center;
-    gap: 20px;
   }
-
   .header-stats {
-    width: 100%;
-    justify-content: space-around;
+    justify-content: center;
   }
-
-  .stat-card {
-    flex: 1;
-  }
-
   .services-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   }
-
   .dashboard-footer {
     flex-direction: column;
     text-align: center;
-    gap: 10px;
+    padding: 20px;
   }
 }
 
 @media (max-width: 480px) {
-  .logo-container h1 {
-    font-size: 2rem;
-    letter-spacing: 1px;
-  }
-
-  .wakanda-logo {
-    font-size: 1.5rem;
-  }
-
-  .header-subtitle {
-    font-size: 0.9rem;
-  }
-
-  .header-stats {
-    gap: 10px;
-  }
-
-  .stat-card {
-    padding: 8px 12px;
-  }
-
-  .stat-value {
-    font-size: 1.2rem;
-  }
-
-  .stat-label {
-    font-size: 0.7rem;
-  }
-
-  .services-grid {
-    gap: 20px;
-  }
-
-  .service-card {
-    padding: 15px;
-    min-height: 250px;
-  }
-
-  .card-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 1.5rem;
-  }
-
-  .card-header h3 {
-    font-size: 1.1rem;
-  }
-
-  .secret-club-card {
-    padding: 20px;
-  }
-
-  .secret-icon {
-    font-size: 2.5rem;
-  }
-
-  .secret-badge {
-    font-size: 0.7rem;
-    padding: 3px 10px;
-  }
-
-  .vibranium-btn {
-    padding: 10px 20px;
-    font-size: 0.9rem;
-  }
-
-  .login-box {
-    padding: 25px 20px;
-    max-width: 90%;
-  }
-
-  .password-input {
-    padding: 12px;
-    font-size: 1.2rem;
-    letter-spacing: 3px;
-  }
-
-  .dashboard-footer {
-    font-size: 0.8rem;
-  }
-}
-
-@media (max-width: 360px) {
-  .logo-container h1 {
-    font-size: 1.6rem;
-  }
-
-  .wakanda-dashboard {
-    padding: 10px;
-  }
-
-  .header-stats {
-    flex-wrap: wrap;
-  }
-
-  .stat-card {
-    flex: 1 0 40%;
-    margin-bottom: 10px;
-  }
-
-  .service-card {
-    min-height: 230px;
-  }
-
-  .card-icon {
-    width: 35px;
-    height: 35px;
-    font-size: 1.3rem;
-    margin-right: 10px;
-  }
-
-  .card-header h3 {
-    font-size: 1rem;
-  }
-
-  .data-row {
-    flex-direction: column;
-    gap: 5px;
-  }
-
-  .secret-icon {
-    font-size: 2rem;
-  }
-
-  .password-input {
-    font-size: 1rem;
-    padding: 10px;
-  }
-
-  .dashboard-footer {
-    font-size: 0.7rem;
-  }
+  .logo-container h1 { font-size: 1.8rem; }
+  .services-grid { grid-template-columns: 1fr; }
+  .login-box { padding: 20px; }
 }

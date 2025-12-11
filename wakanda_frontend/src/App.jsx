@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import SecretClub from './SecretClub';
+import PokemonClub from './PokemonClub';
+import HogwartsClub from './HogwartsClub';
 import './App.css';
 
 const GATEWAY_URL = 'http://localhost:8000';
@@ -144,17 +146,33 @@ function App() {
 
   const handleLogin = (e) => {
     e.preventDefault();
+
     if (password === '123456789') {
-      setView('club');
+      setView('rickmorty');
       setError('');
-      setPassword('');
+    } else if (password === '987654321') {
+      setView('pokemon');
+      setError('');
+    } else if (password === '123456') {
+      setView('harrypotter'); r
+      setError('');
     } else {
       setError('⛔ CLAVE INCORRECTA: Acceso denegado');
     }
+    setPassword('');
   };
 
-  if (view === 'club') {
+
+  if (view === 'rickmorty') {
     return <SecretClub onExit={() => setView('dashboard')} />;
+  }
+
+  if (view === 'pokemon') {
+    return <PokemonClub onExit={() => setView('dashboard')} />;
+  }
+
+  if (view === 'harrypotter') {
+    return <HogwartsClub onExit={() => setView('dashboard')} />;
   }
 
   return (
