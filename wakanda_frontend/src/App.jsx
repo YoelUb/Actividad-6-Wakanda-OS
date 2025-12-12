@@ -96,11 +96,10 @@ function ServiceCard({title, endpoint, icon, theme = 'default'}) {
 }
 
 function App() {
-    const [view, setView] = useState('login'); // 'login', 'register', 'dashboard', 'rickmorty', etc.
+    const [view, setView] = useState('login');
     const [token, setToken] = useState(localStorage.getItem('wakanda_token'));
     const [activeServices] = useState(6);
 
-    // Verificar sesión al cargar
     useEffect(() => {
         if (token) {
             setView('dashboard');
@@ -136,7 +135,6 @@ function App() {
         return <Login onLoginSuccess={handleLoginSuccess} switchToRegister={() => setView('register')}/>;
     }
 
-    // Vistas protegidas
     if (view === 'rickmorty') return <SecretClub onExit={() => setView('dashboard')}/>;
     if (view === 'pokemon') return <PokemonClub onExit={() => setView('dashboard')}/>;
     if (view === 'harrypotter') return <HogwartsClub onExit={() => setView('dashboard')}/>;
@@ -175,7 +173,6 @@ function App() {
                     <ServiceCard title="Gestión de Residuos" endpoint="/waste/status" icon="🗑️" theme="waste"/>
                     <ServiceCard title="Seguridad y Drones" endpoint="/security/alerts" icon="🛡️" theme="security"/>
 
-                    {/* Tarjeta de Acceso Secreto (Easter Egg Legacy) */}
                     <div className="secret-club-card">
                         <div className="secret-header">
                             <div className="secret-icon">🕵️‍♂️</div>
