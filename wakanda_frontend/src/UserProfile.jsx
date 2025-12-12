@@ -4,12 +4,12 @@ import './UserProfile.css';
 
 const USERS_API = "http://localhost:8006";
 
-export default function UserProfile({ token, onLogout }) {
+export default function UserProfile({ token, onLogout, onBackToHome }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState('');
   const [isUploading, setIsUploading] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(null); // Estado para el contador
+  const [timeLeft, setTimeLeft] = useState(null);
 
   const config = {
     headers: {
@@ -135,7 +135,7 @@ export default function UserProfile({ token, onLogout }) {
       <div className="profile-wrapper">
         <div className="error-msg">
           No se pudo cargar el perfil.
-          <button onClick={fetchUser} className="team-btn secondary" style={{marginLeft: '10px'}}>
+          <button onClick={fetchUser} className="team-btn secondary">
             Reintentar
           </button>
         </div>
@@ -146,9 +146,17 @@ export default function UserProfile({ token, onLogout }) {
   return (
     <div className="profile-wrapper">
       <div className="profile-card">
+        <div className="profile-navigation">
+          {onBackToHome && (
+            <button onClick={onBackToHome} className="back-btn">
+              ← Volver al Home
+            </button>
+          )}
+        </div>
+
         <div className="profile-header">
           <div className="avatar-container">
-            <label htmlFor="avatar-upload" style={{cursor: 'pointer', display: 'block', height: '100%'}}>
+            <label htmlFor="avatar-upload" className="avatar-label">
               {user.profile_pic_url ? (
                 <img
                   src={user.profile_pic_url}
@@ -169,7 +177,6 @@ export default function UserProfile({ token, onLogout }) {
               type="file"
               accept="image/*"
               onChange={handleAvatarUpload}
-              style={{ display: 'none' }}
               disabled={isUploading}
             />
             {isUploading && (
@@ -180,7 +187,7 @@ export default function UserProfile({ token, onLogout }) {
           </div>
 
           <div className="profile-info">
-            <h3>{user.full_name || 'Usuario'}</h3>
+            <h3>{user.name} {user.last_name}</h3>
             <div className="profile-role">
               {user.team_id ? `🏆 Miembro de ${getTeamName(user.team_id)}` : '🔓 Agente Libre'}
             </div>
@@ -193,12 +200,7 @@ export default function UserProfile({ token, onLogout }) {
 
         <div className="profile-body">
           {msg && (
-            <div className="notification" style={{
-              background: msg.includes('✅') ? 'rgba(46, 213, 115, 0.1)' : 'rgba(255, 71, 87, 0.1)',
-              borderColor: msg.includes('✅') ? '#2ed573' : '#ff4757',
-              color: msg.includes('✅') ? '#2ed573' : '#ff4757',
-              border: '1px solid'
-            }}>
+            <div className={`notification ${msg.includes('✅') ? 'success' : 'error'}`}>
               {msg}
             </div>
           )}
@@ -212,7 +214,13 @@ export default function UserProfile({ token, onLogout }) {
             <div className="info-item">
               <span className="info-label">🛡️ Seguridad 2FA</span>
               <span className="info-value status-active">
-                <span className="status-indicator" style={{backgroundColor: user.is_2fa_enabled ? '#2ed573' : '#ff4757', boxShadow: `0 0 5px ${user.is_2fa_enabled ? '#2ed573' : '#ff4757'}`}}></span>
+                <span
+                  className="status-indicator"
+                  style={{
+                    backgroundColor: user.is_2fa_enabled ? '#2ed573' : '#ff4757',
+                    boxShadow: `0 0 15px ${user.is_2fa_enabled ? '#2ed573' : '#ff4757'}`
+                  }}
+                ></span>
                 {user.is_2fa_enabled
                   ? `ACTIVO (${user.preferred_2fa_method === 'APP' ? 'Google Auth' : 'Email OTP'})`
                   : 'INACTIVO'}
@@ -222,7 +230,7 @@ export default function UserProfile({ token, onLogout }) {
             <div className="info-item">
               <span className="info-label">📅 Ultimo Cambio</span>
               <span className="info-value">
-                {new Date(user.last_team_change).toLocaleDateString()}
+                {user.last_team_change ? new Date(user.last_team_change).toLocaleDateString() : 'Nunca'}
               </span>
             </div>
           </div>
@@ -257,9 +265,8 @@ export default function UserProfile({ token, onLogout }) {
             </div>
           </div>
 
-          {/* Sección de CLUBS / TEAMS */}
           <div className="control-section">
-            <h4 style={{ justifyContent: 'space-between' }}>
+            <h4 className="club-section-header">
               <span>⚔️ Afiliación de Club</span>
               {timeLeft && <span className="countdown-timer">⏳ Cambio disponible en: {timeLeft}</span>}
             </h4>

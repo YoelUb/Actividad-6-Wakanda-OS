@@ -13,6 +13,8 @@ export default function Login({ onLoginSuccess, switchToRegister }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [method, setMethod] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showCode, setShowCode] = useState(false);
 
   const handleCredentials = async (e) => {
     e.preventDefault();
@@ -63,22 +65,34 @@ export default function Login({ onLoginSuccess, switchToRegister }) {
         {step === 1 ? (
           <form onSubmit={handleCredentials}>
             <p>Identifícate, ciudadano.</p>
+
             <input
               type="email"
               placeholder="Correo Oficial"
-              className="password-input"
+              className="login-input"
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
             />
-            <input
-              type="password"
-              placeholder="Clave de Acceso"
-              className="password-input"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-            />
+
+            <div className="password-wrapper">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Clave de Acceso"
+                className="login-input"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                className={`password-toggle ${showPassword ? 'active' : ''}`}
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? "👁️" : "🔒"}
+              </button>
+            </div>
+
             <button type="submit" className="vibranium-btn" disabled={loading}>
               {loading ? 'Verificando...' : 'INICIAR SESIÓN'}
             </button>
@@ -92,15 +106,26 @@ export default function Login({ onLoginSuccess, switchToRegister }) {
                 ? `Hemos enviado un código a tu correo: ${email}`
                 : 'Introduce el código de tu Google Authenticator'}
             </p>
-            <input
-              type="text"
-              placeholder="000000"
-              className="password-input"
-              value={code}
-              onChange={e => setCode(e.target.value)}
-              maxLength={6}
-              autoFocus
-            />
+
+            <div className="password-wrapper">
+              <input
+                type={showCode ? "text" : "text"}
+                placeholder="000000"
+                className="login-input"
+                value={code}
+                onChange={e => setCode(e.target.value)}
+                maxLength={6}
+                autoFocus
+              />
+              <button
+                type="button"
+                className={`password-toggle ${showCode ? 'active' : ''}`}
+                onClick={() => setShowCode(!showCode)}
+              >
+                {showCode ? "👁️" : "🔒"}
+              </button>
+            </div>
+
             <button type="submit" className="vibranium-btn" disabled={loading}>
               {loading ? 'Validando...' : 'VERIFICAR IDENTIDAD'}
             </button>

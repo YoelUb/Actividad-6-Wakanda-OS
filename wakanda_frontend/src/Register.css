@@ -2,38 +2,26 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 80vh;
+  min-height: 90vh;
   width: 100%;
+  padding: 2rem;
   animation: slideIn 0.8s ease-out;
-  position: relative;
-  z-index: 10;
 }
 
 .register-box {
   background: rgba(11, 12, 21, 0.95);
-  padding: 3.5rem;
-  border-radius: 25px;
+  padding: 4rem 3rem;
+  border-radius: 28px;
   border: 2px solid var(--neon-blue);
   box-shadow:
-    0 0 40px rgba(0, 153, 255, 0.25),
-    0 0 80px rgba(189, 0, 255, 0.15),
-    inset 0 0 30px rgba(0, 0, 0, 0.7);
+    0 0 50px rgba(0, 153, 255, 0.25),
+    0 0 100px rgba(189, 0, 255, 0.15),
+    inset 0 0 40px rgba(0, 0, 0, 0.6);
+  max-width: 560px;
   width: 100%;
-  max-width: 520px;
   text-align: center;
-  backdrop-filter: blur(15px);
   position: relative;
   overflow: hidden;
-  transform: perspective(1000px) rotateX(5deg);
-  transition: all 0.4s ease;
-}
-
-.register-box:hover {
-  transform: perspective(1000px) rotateX(0deg);
-  box-shadow:
-    0 0 60px rgba(0, 153, 255, 0.35),
-    0 0 100px rgba(189, 0, 255, 0.2),
-    inset 0 0 40px rgba(0, 0, 0, 0.8);
 }
 
 .register-box::before {
@@ -41,34 +29,16 @@
   position: absolute;
   top: 0;
   left: 0;
+  height: 6px;
   width: 100%;
-  height: 5px;
-  background: linear-gradient(90deg,
-    var(--neon-purple),
-    var(--neon-blue),
-    var(--neon-purple));
-  box-shadow: 0 0 15px var(--neon-blue);
+  background: linear-gradient(90deg, var(--neon-purple), var(--neon-blue), var(--neon-purple));
   animation: scanLine 3s linear infinite;
 }
 
-.register-box::after {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle at center,
-    rgba(0, 153, 255, 0.05) 0%,
-    transparent 70%);
-  animation: rotate 20s linear infinite;
-  pointer-events: none;
-}
-
 .register-box h2 {
-  margin-bottom: 1.8rem;
-  font-size: 2.4rem;
-  letter-spacing: 3px;
+  margin-bottom: 2.3rem;
+  font-size: 2.6rem;
+  letter-spacing: 4px;
   background: linear-gradient(90deg, #ffffff, var(--neon-blue), #ffffff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -76,49 +46,251 @@
   animation: shimmer 3s infinite linear;
   text-transform: uppercase;
   font-weight: 900;
-  text-shadow: 0 0 20px rgba(0, 153, 255, 0.3);
 }
 
-.input-group {
-  margin-bottom: 1.8rem;
+.welcome-text {
+  color: #ddd;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.secret-info {
+  color: #aaa;
+  font-size: 0.95rem;
+  margin-bottom: 20px;
+}
+
+.setup-instructions {
+  color: #888;
+  font-size: 0.85rem;
+  margin: 25px 0;
+  line-height: 1.5;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 1.6rem;
+}
+
+.form-group {
+  margin-bottom: 1.6rem;
   text-align: left;
 }
 
-.input-group label {
+.form-group label {
   display: block;
-  margin-bottom: 0.8rem;
+  margin-bottom: 8px;
   color: var(--neon-blue);
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
-.register-input {
-  width: 100%;
-  padding: 1.2rem 1.5rem;
-  background: rgba(20, 20, 30, 0.8);
-  border: 2px solid rgba(0, 153, 255, 0.3);
-  border-radius: 12px;
-  color: #ffffff;
-  font-size: 1.1rem;
-  font-family: 'Segoe UI', sans-serif;
-  transition: all 0.3s ease;
-  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.4);
+.club-label {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--neon-blue);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
-.register-input:focus {
+.register-input, .register-select {
+  width: 100%;
+  padding: 1.3rem 1.6rem;
+  background: rgba(25, 25, 35, 0.85);
+  border: 2px solid rgba(0, 153, 255, 0.25);
+  border-radius: 14px;
+  color: white;
+  font-size: 1.15rem;
   outline: none;
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.45);
+  transition: all 0.3s ease;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.register-input:focus, .register-select:focus {
   border-color: var(--neon-blue);
   box-shadow:
-    inset 0 0 20px rgba(0, 0, 0, 0.6),
-    0 0 25px rgba(0, 153, 255, 0.4);
+    inset 0 0 25px rgba(0, 0, 0, 0.6),
+    0 0 35px rgba(0, 153, 255, 0.4);
   transform: translateY(-2px);
 }
 
-.register-input::placeholder {
+.register-input.input-error {
+  border-color: #ff4757;
+  box-shadow:
+    inset 0 0 18px rgba(0, 0, 0, 0.45),
+    0 0 25px rgba(255, 71, 87, 0.3);
+  animation: errorShake 0.5s ease-in-out;
+}
+
+.register-input.input-error:focus {
+  border-color: #ff4757;
+  box-shadow:
+    inset 0 0 25px rgba(0, 0, 0, 0.6),
+    0 0 35px rgba(255, 71, 87, 0.4);
+}
+
+.register-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230099ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 1.6rem center;
+  background-size: 1em;
+  padding-right: 3.5rem;
+  cursor: pointer;
+}
+
+.password-wrapper {
+  position: relative;
+  margin-bottom: 5px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 153, 255, 0.1);
+  border: 2px solid rgba(0, 153, 255, 0.5);
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--neon-blue);
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 0 12px rgba(0, 153, 255, 0.3);
+  border: none;
+  outline: none;
+}
+
+.password-toggle:hover {
+  background: rgba(0, 153, 255, 0.2);
+  border-color: var(--neon-purple);
+  transform: translateY(-50%) scale(1.15);
+  color: var(--neon-purple);
+  box-shadow: 0 0 20px rgba(189, 0, 255, 0.5);
+}
+
+.password-toggle.active {
+  animation: rotateToggle 0.4s ease forwards;
+  background: rgba(189, 0, 255, 0.15);
+  border-color: var(--neon-purple);
+  color: var(--neon-purple);
+}
+
+.password-hint {
   color: #666;
+  font-size: 0.8rem;
+  margin-top: 5px;
+  margin-left: 5px;
   font-style: italic;
+}
+
+.field-error {
+  color: #ff4757;
+  font-size: 0.8rem;
+  margin-top: 5px;
+  margin-left: 5px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.error-message, .success-message {
+  padding: 15px 20px;
+  border-radius: 14px;
+  margin: 1.5rem 0;
+  font-weight: 600;
+  text-align: center;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.error-message {
+  background: rgba(255, 71, 87, 0.12);
+  border: 2px solid #ff4757;
+  color: #ff4757;
+}
+
+.vibranium-btn {
+  width: 100%;
+  padding: 1.4rem;
+  margin-top: 2rem;
+  background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+  border-radius: 14px;
+  border: none;
+  color: white;
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow:
+    0 6px 25px rgba(0, 153, 255, 0.45),
+    0 0 35px rgba(189, 0, 255, 0.3);
+  transition: all 0.35s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.vibranium-btn:hover:not(:disabled) {
+  transform: translateY(-4px);
+  box-shadow:
+    0 10px 35px rgba(0, 153, 255, 0.6),
+    0 0 50px rgba(189, 0, 255, 0.5);
+}
+
+.vibranium-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.vibranium-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent);
+  transition: left 0.6s;
+}
+
+.vibranium-btn:hover:not(:disabled)::before {
+  left: 100%;
+}
+
+.vibranium-btn.secondary {
+  background: none;
+  margin-top: 1.1rem;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  font-size: 1rem;
+  color: #ccc;
+  box-shadow: none;
+}
+
+.vibranium-btn.secondary:hover:not(:disabled) {
+  border-color: var(--neon-blue);
+  color: var(--neon-blue);
+  box-shadow: 0 0 25px rgba(0, 153, 255, 0.3);
+  background: rgba(0, 153, 255, 0.05);
+}
+
+.login-redirect {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .secret-key-display {
@@ -161,121 +333,59 @@
   border: 1px solid var(--neon-purple);
 }
 
-.vibranium-btn {
-  width: 100%;
-  padding: 1.3rem;
-  margin: 2rem 0 1.5rem;
-  background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
-  border: none;
-  border-radius: 12px;
-  color: white;
-  font-size: 1.2rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  cursor: pointer;
-  transition: all 0.4s ease;
-  position: relative;
-  overflow: hidden;
-  text-transform: uppercase;
-  box-shadow:
-    0 5px 20px rgba(0, 153, 255, 0.4),
-    0 0 30px rgba(189, 0, 255, 0.3);
-}
-
-.vibranium-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg,
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent);
-  transition: left 0.6s;
-}
-
-.vibranium-btn:hover {
-  transform: translateY(-3px);
-  box-shadow:
-    0 8px 30px rgba(0, 153, 255, 0.6),
-    0 0 40px rgba(189, 0, 255, 0.5);
-}
-
-.vibranium-btn:hover::before {
-  left: 100%;
-}
-
-.vibranium-btn:active {
-  transform: translateY(0);
-  box-shadow:
-    0 3px 15px rgba(0, 153, 255, 0.4),
-    0 0 25px rgba(189, 0, 255, 0.3);
-}
-
-.vibranium-btn.secondary {
-  margin-top: 1rem;
-  background: transparent;
-  border: 2px solid rgba(255, 255, 255, 0.15);
-  color: #888;
-  font-size: 0.9rem;
-  box-shadow: none;
-  padding: 1rem;
-}
-
-.vibranium-btn.secondary:hover {
-  border-color: var(--neon-blue);
-  color: var(--neon-blue);
-  box-shadow: 0 0 25px rgba(0, 153, 255, 0.3);
-  background: rgba(0, 153, 255, 0.05);
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-30px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-
-@keyframes scanLine {
-  0% {
-    background-position: -100% 0;
-    opacity: 0.7;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    background-position: 200% 0;
-    opacity: 0.7;
-  }
-}
-
-@keyframes rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+@keyframes rotateToggle {
+  0% { transform: translateY(-50%) rotate(0deg); }
+  100% { transform: translateY(-50%) rotate(360deg); }
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% center; }
-  100% { background-position: 200% center; }
+  0% { background-position: -150% center; }
+  100% { background-position: 150% center; }
+}
+
+@keyframes scanLine {
+  0% { background-position: -100% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(30px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes errorShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
 }
 
 @media (max-width: 768px) {
+  .register-container {
+    padding: 1.5rem;
+  }
+
   .register-box {
-    padding: 2.5rem;
-    margin: 1rem;
-    max-width: 90%;
-    transform: perspective(1000px) rotateX(0deg);
+    padding: 3rem 2rem;
   }
 
   .register-box h2 {
-    font-size: 2rem;
+    font-size: 2.2rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 1.2rem;
+  }
+
+  .password-toggle {
+    width: 38px;
+    height: 38px;
+    font-size: 1.1rem;
   }
 
   .secret-key-display {
@@ -283,31 +393,26 @@
     padding: 1.2rem;
   }
 
-  .register-input {
-    padding: 1rem;
-    font-size: 1rem;
-  }
-
   .vibranium-btn {
-    padding: 1.1rem;
     font-size: 1.1rem;
+    padding: 1.2rem;
   }
 }
 
 @media (max-width: 480px) {
-  .register-container {
-    min-height: 85vh;
-    padding: 1rem;
-  }
-
   .register-box {
-    padding: 2rem 1.5rem;
+    padding: 2.2rem 1.5rem;
     border-radius: 20px;
   }
 
   .register-box h2 {
     font-size: 1.8rem;
     letter-spacing: 2px;
+  }
+
+  .register-input, .register-select {
+    padding: 1rem 1.2rem;
+    font-size: 1rem;
   }
 
   .secret-key-display {

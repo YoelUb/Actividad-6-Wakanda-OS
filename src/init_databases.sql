@@ -4,3 +4,4 @@ CREATE DATABASE water_db;
 CREATE DATABASE waste_db;
 CREATE DATABASE security_db;
 CREATE DATABASE gateway_db;
+CREATE DATABASE users_db;

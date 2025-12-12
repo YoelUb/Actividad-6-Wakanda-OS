@@ -3,20 +3,24 @@ import logging
 import pyotp
 import boto3
 import smtplib
+import random
+import re
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, create_engine
 from sqlalchemy.orm import sessionmaker, Session, relationship, declarative_base
 from passlib.context import CryptContext
 from jose import JWTError, jwt
+from pydantic import BaseModel
 
 SECRET_KEY = os.getenv("SECRET_KEY", "supersecreto_gratis")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
 MAIL_USERNAME = os.getenv("MAIL_USERNAME")
 MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
@@ -35,8 +39,17 @@ s3_client = boto3.client(
     aws_secret_access_key=MINIO_SECRET
 )
 
-app = FastAPI(title="Gestión de Usuarios (Auth, Teams & Email)")
+app = FastAPI(title="Gestión de Usuarios")
 logger = logging.getLogger("uvicorn")
+
+origins = ["http://localhost:3000", "http://localhost:5173", "*"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL.replace("+asyncpg", ""))
@@ -56,17 +69,55 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
-    full_name = Column(String)
+    name = Column(String)
+    last_name = Column(String)
     profile_pic_url = Column(String, nullable=True)
     role = Column(String, default="CITIZEN")
+
     team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
     last_team_change = Column(DateTime, default=datetime.utcnow)
+
     is_2fa_enabled = Column(Boolean, default=False)
     two_factor_secret = Column(String, nullable=True)
     preferred_2fa_method = Column(String, default="APP")
 
+    email_verification_code = Column(String, nullable=True)
+    email_code_expires_at = Column(DateTime, nullable=True)
+
+    is_verified = Column(Boolean, default=False)
+    verification_date = Column(DateTime, nullable=True)
+
+    club_password = Column(String, nullable=True)
+
 
 Base.metadata.create_all(bind=engine)
+
+
+class ClubVerify(BaseModel):
+    password: str
+
+
+def init_teams():
+    db = SessionLocal()
+    try:
+        teams_data = [
+            {"id": 1, "name": "Rick & Morty Club", "description": "Exploradores del multiverso"},
+            {"id": 2, "name": "Pokémon League", "description": "Entrenadores y maestros"},
+            {"id": 3, "name": "Hogwarts School", "description": "Magia y hechicería"}
+        ]
+        for t_data in teams_data:
+            exists = db.query(Team).filter(Team.id == t_data["id"]).first()
+            if not exists:
+                new_team = Team(id=t_data["id"], name=t_data["name"], description=t_data["description"])
+                db.add(new_team)
+        db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        db.close()
+
+
+init_teams()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -99,147 +150,26 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     return user
 
 
-def send_email_code(to_email: str, code: str):
+def send_verification_email(to_email: str, code: str):
     if not MAIL_USERNAME or not MAIL_PASSWORD:
-        logger.warning("Credenciales SMTP no configuradas. Imprimiendo en log.")
-        logger.info(f"CODE para {to_email}: {code}")
+        logger.warning(f"CODE para {to_email}: {code}")
         return
 
     msg = MIMEMultipart()
     msg['From'] = MAIL_FROM
     msg['To'] = to_email
-    msg['Subject'] = "🔐 Tu Código de Acceso Wakanda OS"
+    msg['Subject'] = "Codigo de Verificacion - Wakanda OS"
 
     body = f"""
-    <!DOCTYPE html>
     <html>
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Wakanda OS - Verificación</title>
-        <style>
-            body {{
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                margin: 0;
-                padding: 20px;
-            }}
-            .container {{
-                max-width: 600px;
-                margin: 40px auto;
-                background: white;
-                border-radius: 20px;
-                overflow: hidden;
-                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            }}
-            .header {{
-                background: linear-gradient(90deg, #1a237e 0%, #311b92 100%);
-                color: white;
-                padding: 40px 30px;
-                text-align: center;
-            }}
-            .logo {{
-                font-size: 36px;
-                font-weight: bold;
-                margin-bottom: 10px;
-                color: #FFD700;
-                letter-spacing: 2px;
-            }}
-            .content {{
-                padding: 40px 30px;
-            }}
-            .code-box {{
-                background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-                color: white;
-                font-size: 48px;
-                font-weight: bold;
-                text-align: center;
-                padding: 25px;
-                border-radius: 15px;
-                margin: 30px 0;
-                letter-spacing: 10px;
-                box-shadow: 0 10px 30px rgba(245, 87, 108, 0.3);
-            }}
-            .instructions {{
-                background: #f8f9fa;
-                padding: 20px;
-                border-radius: 10px;
-                margin: 30px 0;
-                border-left: 5px solid #4CAF50;
-            }}
-            .footer {{
-                background: #1a237e;
-                color: #B0BEC5;
-                text-align: center;
-                padding: 25px;
-                font-size: 14px;
-            }}
-            .badge {{
-                display: inline-block;
-                background: #FFD700;
-                color: #1a237e;
-                padding: 8px 20px;
-                border-radius: 50px;
-                font-weight: bold;
-                margin-top: 15px;
-                font-size: 18px;
-            }}
-            .countdown {{
-                display: inline-block;
-                background: #4CAF50;
-                color: white;
-                padding: 8px 15px;
-                border-radius: 10px;
-                margin-top: 10px;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <div class="logo">⚡ WAKANDA OS</div>
-                <h1 style="margin: 0; font-weight: 300;">Verificación en Dos Pasos</h1>
-                <div class="badge">SISTEMA DE ALTA SEGURIDAD</div>
-            </div>
-
-            <div class="content">
-                <h2 style="color: #1a237e; margin-top: 0;">¡Hola, Guardián!</h2>
-                <p>Estás a un paso de acceder al sistema más avanzado del multiverso. Usa el siguiente código para completar tu verificación:</p>
-
-                <div class="code-box">
-                    {code}
-                </div>
-
-                <div style="text-align: center;">
-                    <div class="countdown">⏳ Válido por 30 segundos</div>
-                </div>
-
-                <div class="instructions">
-                    <h3 style="color: #4CAF50; margin-top: 0;">📋 Instrucciones:</h3>
-                    <ol style="margin: 10px 0; padding-left: 20px;">
-                        <li>Ingresa este código en la pantalla de verificación</li>
-                        <li>No compartas este código con nadie</li>
-                        <li>Si no solicitaste este acceso, ignora este mensaje</li>
-                    </ol>
-                </div>
-
-                <p style="color: #666; font-size: 14px; text-align: center;">
-                    🛡️ Este código es generado automáticamente por el sistema de seguridad de Wakanda OS
-                </p>
-            </div>
-
-            <div class="footer">
-                <p style="margin: 0;">© {datetime.now().year} Wakanda OS - Todos los derechos reservados</p>
-                <p style="margin: 10px 0 0 0; font-size: 12px;">
-                    Protegido por tecnología Vibranium<br>
-                    Este es un mensaje automático, por favor no respondas
-                </p>
-            </div>
-        </div>
-    </body>
+      <body>
+        <h2>Wakanda OS</h2>
+        <p>Tu código de seguridad es:</p>
+        <h1>{code}</h1>
+        <p>Válido por 20 minutos.</p>
+      </body>
     </html>
     """
-
     msg.attach(MIMEText(body, 'html'))
 
     try:
@@ -249,28 +179,86 @@ def send_email_code(to_email: str, code: str):
         text = msg.as_string()
         server.sendmail(MAIL_FROM, to_email, text)
         server.quit()
-        logger.info(f"Email enviado correctamente a {to_email}")
     except Exception as e:
         logger.error(f"Fallo al enviar email: {e}")
         logger.info(f"FALLBACK CODE para {to_email}: {code}")
 
 
+def send_account_verified_email(to_email: str, club_password: str):
+    if not MAIL_USERNAME or not MAIL_PASSWORD:
+        logger.warning(f"Cuenta verificada. Club Password: {club_password}")
+        return
+
+    msg = MIMEMultipart()
+    msg['From'] = MAIL_FROM
+    msg['To'] = to_email
+    msg['Subject'] = "Bienvenido al Club VIP Wakanda"
+
+    body = f"""
+    <html>
+      <body>
+        <h2>¡Cuenta Verificada!</h2>
+        <p>Tu contraseña única para el Club VIP es:</p>
+        <h1 style="color: #bd00ff">{club_password}</h1>
+        <p>Guárdala en lugar seguro.</p>
+      </body>
+    </html>
+    """
+    msg.attach(MIMEText(body, 'html'))
+
+    try:
+        server = smtplib.SMTP(MAIL_SERVER, MAIL_PORT)
+        server.starttls()
+        server.login(MAIL_USERNAME, MAIL_PASSWORD)
+        text = msg.as_string()
+        server.sendmail(MAIL_FROM, to_email, text)
+        server.quit()
+    except Exception as e:
+        logger.error(f"Fallo al enviar email VIP: {e}")
+
+
 @app.post("/register")
-def register(email: str = Form(...), password: str = Form(...), full_name: str = Form(...),
-             db: Session = Depends(get_db)):
+def register(
+        email: str = Form(...),
+        password: str = Form(...),
+        name: str = Form(...),
+        last_name: str = Form(...),
+        team_id: int = Form(None),
+        db: Session = Depends(get_db)
+):
     if db.query(User).filter(User.email == email).first():
         raise HTTPException(400, "Email ya registrado")
 
-    secret_2fa = pyotp.random_base32()
+    if not re.match(r"^[a-zA-ZÀ-ÿ\s]+$", name) or not re.match(r"^[a-zA-ZÀ-ÿ\s]+$", last_name):
+        raise HTTPException(400, "Nombre y Apellidos solo pueden contener letras")
+
+    if team_id:
+        team = db.query(Team).filter(Team.id == team_id).first()
+        if not team:
+            raise HTTPException(400, f"El equipo con ID {team_id} no existe.")
+
+    verification_code = str(random.randint(100000, 999999))
+    club_password = f"WAKANDA-{random.randint(1000, 9999)}-VIP"
+
     new_user = User(
         email=email,
         hashed_password=pwd_context.hash(password),
-        full_name=full_name,
-        two_factor_secret=secret_2fa
+        name=name,
+        last_name=last_name,
+        team_id=team_id,
+        is_verified=False,
+        verification_code=verification_code,
+        code_expires_at=datetime.utcnow() + timedelta(minutes=20),
+        last_code_sent_at=datetime.utcnow(),
+        club_password=club_password,
+        last_team_change=datetime.utcnow() - timedelta(days=1)
     )
     db.add(new_user)
     db.commit()
-    return {"msg": "Usuario creado", "2fa_secret": secret_2fa}
+
+    send_verification_email(email, verification_code)
+
+    return {"msg": "Usuario creado. Verifica tu cuenta con el código enviado al correo."}
 
 
 @app.post("/login")
@@ -279,47 +267,66 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     if not user or not pwd_context.verify(form_data.password, user.hashed_password):
         raise HTTPException(401, "Credenciales incorrectas")
 
-    if user.is_2fa_enabled:
-        temp_token = create_access_token({"sub": user.email, "type": "pre_auth"})
+    if not user.is_verified:
+        if user.code_expires_at and datetime.utcnow() > user.code_expires_at:
+            return {"status": "VERIFICATION_REQUIRED", "msg": "Código expirado. Solicita uno nuevo."}
+        return {"status": "VERIFICATION_REQUIRED", "msg": "Cuenta no verificada. Revisa tu correo."}
 
-        totp = pyotp.TOTP(user.two_factor_secret)
-        code = totp.now()
-
-        if user.preferred_2fa_method == "EMAIL":
-            send_email_code(user.email, code)
-            return {"status": "2FA_REQUIRED", "method": "EMAIL", "temp_token": temp_token}
-        else:
-            return {"status": "2FA_REQUIRED", "method": "APP", "temp_token": temp_token}
-
-    access_token = create_access_token({"sub": user.email, "role": user.role, "type": "full"})
-    return {"access_token": access_token, "token_type": "bearer"}
+    access_token = create_access_token({"sub": user.email, "role": user.role})
+    return {"access_token": access_token, "token_type": "bearer", "status": "LOGIN_SUCCESS"}
 
 
-@app.post("/verify-2fa")
-def verify_2fa(code: str, temp_token: str, db: Session = Depends(get_db)):
-    try:
-        payload = jwt.decode(temp_token, SECRET_KEY, algorithms=[ALGORITHM])
-        if payload.get("type") != "pre_auth": raise Exception()
-        email = payload.get("sub")
-    except:
-        raise HTTPException(401, "Token temporal inválido")
-
+@app.post("/verify-account")
+def verify_account(email: str = Form(...), code: str = Form(...), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == email).first()
-    totp = pyotp.TOTP(user.two_factor_secret)
+    if not user: raise HTTPException(404, "Usuario no encontrado")
 
-    if not totp.verify(code, valid_window=2):
-        raise HTTPException(400, "Código 2FA incorrecto")
+    if user.is_verified: return {"msg": "La cuenta ya estaba verificada"}
 
-    access_token = create_access_token({"sub": user.email, "role": user.role, "type": "full"})
-    return {"access_token": access_token, "token_type": "bearer"}
+    if user.verification_code != code: raise HTTPException(400, "Código incorrecto")
 
+    if datetime.utcnow() > user.code_expires_at: raise HTTPException(400, "El código ha expirado")
 
-@app.post("/me/2fa/enable")
-def enable_2fa(method: str = "APP", user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    user.is_2fa_enabled = True
-    user.preferred_2fa_method = method.upper()
+    user.is_verified = True
+    user.verification_code = None
     db.commit()
-    return {"msg": f"2FA activado usando {method.upper()}"}
+
+    send_account_verified_email(user.email, user.club_password)
+
+    access_token = create_access_token({"sub": user.email, "role": user.role})
+    return {"access_token": access_token, "token_type": "bearer", "msg": "Cuenta verificada"}
+
+
+@app.post("/resend-code")
+def resend_code(email: str = Form(...), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == email).first()
+    if not user: raise HTTPException(404, "Usuario no encontrado")
+
+    if user.last_code_sent_at and datetime.utcnow() < user.last_code_sent_at + timedelta(minutes=15):
+        raise HTTPException(429, "Espera 15 minutos para reenviar.")
+
+    new_code = str(random.randint(100000, 999999))
+    user.verification_code = new_code
+    user.code_expires_at = datetime.utcnow() + timedelta(minutes=20)
+    user.last_code_sent_at = datetime.utcnow()
+    db.commit()
+
+    send_verification_email(user.email, new_code)
+    return {"msg": "Nuevo código enviado"}
+
+
+@app.post("/clubs/verify")
+def verify_club(data: ClubVerify, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not user.club_password or user.club_password != data.password:
+        raise HTTPException(status_code=401, detail="⛔ Contraseña de Club incorrecta.")
+
+    if not user.team_id:
+        raise HTTPException(status_code=403, detail="⚠️ No tienes un equipo asignado.")
+
+    team_map = {1: "rickmorty", 2: "pokemon", 3: "hogwarts"}
+
+    view = team_map.get(user.team_id)
+    return {"status": "ok", "view": view}
 
 
 @app.post("/me/avatar")
@@ -343,7 +350,11 @@ def change_team(team_id: int, user: User = Depends(get_current_user), db: Sessio
     if user.last_team_change:
         diff = datetime.utcnow() - user.last_team_change
         if diff.total_seconds() < 86400:
-            raise HTTPException(400, "Espera 24 horas para cambiar de equipo.")
+            raise HTTPException(400, "Espera 24 horas.")
+
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team: raise HTTPException(404, "Equipo no encontrado")
+
     user.team_id = team_id
     user.last_team_change = datetime.utcnow()
     db.commit()
