@@ -93,6 +93,17 @@ services:
       - SECRET_CLUB_API_URL=${SECRET_CLUB_API_URL}
     ports:
       - "8000:8000"
+  gestion_usuarios:
+    environment:
+      - DATABASE_URL=${DATABASE_URL_USERS}
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD}
+      - SECRET_KEY=${SECRET_KEY}
+      - MAIL_USERNAME=tu_correo@gmail.com
+      - MAIL_PASSWORD=tu_contraseña_app
+      - MAIL_PORT=587
+      - MAIL_SERVER=smtp.gmail.com
   wakanda_frontend:
     build:
       context: ./wakanda_frontend
