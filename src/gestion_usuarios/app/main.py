@@ -1,6 +1,5 @@
 import os
 import logging
-import pyotp
 import boto3
 import smtplib
 import random
@@ -13,7 +12,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, F
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, create_engine
-from sqlalchemy.orm import sessionmaker, Session, relationship, declarative_base
+from sqlalchemy.orm import sessionmaker, Session, declarative_base
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from pydantic import BaseModel
@@ -56,13 +55,11 @@ engine = create_engine(DATABASE_URL.replace("+asyncpg", ""))
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-
 class Team(Base):
     __tablename__ = "teams"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True)
     description = Column(String)
-
 
 class User(Base):
     __tablename__ = "users"
@@ -83,19 +80,17 @@ class User(Base):
 
     email_verification_code = Column(String, nullable=True)
     email_code_expires_at = Column(DateTime, nullable=True)
+    last_code_sent_at = Column(DateTime, nullable=True)
 
     is_verified = Column(Boolean, default=False)
     verification_date = Column(DateTime, nullable=True)
 
     club_password = Column(String, nullable=True)
 
-
 Base.metadata.create_all(bind=engine)
-
 
 class ClubVerify(BaseModel):
     password: str
-
 
 def init_teams():
     db = SessionLocal()
@@ -116,12 +111,10 @@ def init_teams():
     finally:
         db.close()
 
-
 init_teams()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
-
 
 def get_db():
     db = SessionLocal()
@@ -130,13 +123,11 @@ def get_db():
     finally:
         db.close()
 
-
 def create_access_token(data: dict):
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
@@ -148,7 +139,6 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     user = db.query(User).filter(User.email == email).first()
     if not user: raise HTTPException(status_code=401)
     return user
-
 
 def send_verification_email(to_email: str, code: str):
     if not MAIL_USERNAME or not MAIL_PASSWORD:
@@ -183,7 +173,6 @@ def send_verification_email(to_email: str, code: str):
         logger.error(f"Fallo al enviar email: {e}")
         logger.info(f"FALLBACK CODE para {to_email}: {code}")
 
-
 def send_account_verified_email(to_email: str, club_password: str):
     if not MAIL_USERNAME or not MAIL_PASSWORD:
         logger.warning(f"Cuenta verificada. Club Password: {club_password}")
@@ -216,7 +205,6 @@ def send_account_verified_email(to_email: str, club_password: str):
     except Exception as e:
         logger.error(f"Fallo al enviar email VIP: {e}")
 
-
 @app.post("/register")
 def register(
         email: str = Form(...),
@@ -247,8 +235,8 @@ def register(
         last_name=last_name,
         team_id=team_id,
         is_verified=False,
-        verification_code=verification_code,
-        code_expires_at=datetime.utcnow() + timedelta(minutes=20),
+        email_verification_code=verification_code,
+        email_code_expires_at=datetime.utcnow() + timedelta(minutes=20),
         last_code_sent_at=datetime.utcnow(),
         club_password=club_password,
         last_team_change=datetime.utcnow() - timedelta(days=1)
@@ -260,7 +248,6 @@ def register(
 
     return {"msg": "Usuario creado. Verifica tu cuenta con el código enviado al correo."}
 
-
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == form_data.username).first()
@@ -268,13 +255,12 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         raise HTTPException(401, "Credenciales incorrectas")
 
     if not user.is_verified:
-        if user.code_expires_at and datetime.utcnow() > user.code_expires_at:
+        if user.email_code_expires_at and datetime.utcnow() > user.email_code_expires_at:
             return {"status": "VERIFICATION_REQUIRED", "msg": "Código expirado. Solicita uno nuevo."}
         return {"status": "VERIFICATION_REQUIRED", "msg": "Cuenta no verificada. Revisa tu correo."}
 
     access_token = create_access_token({"sub": user.email, "role": user.role})
     return {"access_token": access_token, "token_type": "bearer", "status": "LOGIN_SUCCESS"}
-
 
 @app.post("/verify-account")
 def verify_account(email: str = Form(...), code: str = Form(...), db: Session = Depends(get_db)):
@@ -283,19 +269,20 @@ def verify_account(email: str = Form(...), code: str = Form(...), db: Session = 
 
     if user.is_verified: return {"msg": "La cuenta ya estaba verificada"}
 
-    if user.verification_code != code: raise HTTPException(400, "Código incorrecto")
+    if user.email_verification_code != code: raise HTTPException(400, "Código incorrecto")
 
-    if datetime.utcnow() > user.code_expires_at: raise HTTPException(400, "El código ha expirado")
+    if user.email_code_expires_at and datetime.utcnow() > user.email_code_expires_at:
+        raise HTTPException(400, "El código ha expirado")
 
     user.is_verified = True
-    user.verification_code = None
+    user.email_verification_code = None
+    user.verification_date = datetime.utcnow()
     db.commit()
 
     send_account_verified_email(user.email, user.club_password)
 
     access_token = create_access_token({"sub": user.email, "role": user.role})
     return {"access_token": access_token, "token_type": "bearer", "msg": "Cuenta verificada"}
-
 
 @app.post("/resend-code")
 def resend_code(email: str = Form(...), db: Session = Depends(get_db)):
@@ -306,14 +293,13 @@ def resend_code(email: str = Form(...), db: Session = Depends(get_db)):
         raise HTTPException(429, "Espera 15 minutos para reenviar.")
 
     new_code = str(random.randint(100000, 999999))
-    user.verification_code = new_code
-    user.code_expires_at = datetime.utcnow() + timedelta(minutes=20)
+    user.email_verification_code = new_code
+    user.email_code_expires_at = datetime.utcnow() + timedelta(minutes=20)
     user.last_code_sent_at = datetime.utcnow()
     db.commit()
 
     send_verification_email(user.email, new_code)
     return {"msg": "Nuevo código enviado"}
-
 
 @app.post("/clubs/verify")
 def verify_club(data: ClubVerify, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -327,7 +313,6 @@ def verify_club(data: ClubVerify, user: User = Depends(get_current_user), db: Se
 
     view = team_map.get(user.team_id)
     return {"status": "ok", "view": view}
-
 
 @app.post("/me/avatar")
 async def upload_avatar(file: UploadFile = File(...), user: User = Depends(get_current_user),
@@ -344,7 +329,6 @@ async def upload_avatar(file: UploadFile = File(...), user: User = Depends(get_c
     db.commit()
     return {"url": url}
 
-
 @app.post("/me/team")
 def change_team(team_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if user.last_team_change:
@@ -359,7 +343,6 @@ def change_team(team_id: int, user: User = Depends(get_current_user), db: Sessio
     user.last_team_change = datetime.utcnow()
     db.commit()
     return {"message": "Equipo cambiado"}
-
 
 @app.get("/me")
 def read_users_me(user: User = Depends(get_current_user)):

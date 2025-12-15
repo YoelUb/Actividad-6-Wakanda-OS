@@ -381,7 +381,6 @@
   transform: translateY(-2px);
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .password-toggle {
     width: 38px;
@@ -405,4 +404,26 @@
   .password-wrapper .login-input {
     padding-right: 3.2rem;
   }
+}
+
+.error-message {
+  background: rgba(255, 71, 87, 0.1);
+  border: 1px solid #ff4757;
+  color: #ff4757;
+  padding: 10px;
+  border-radius: 8px;
+  text-align: center;
+  margin-top: 15px;
+  font-weight: bold;
+}
+
+.success-message {
+  background: rgba(46, 213, 115, 0.1);
+  border: 1px solid #2ed573;
+  color: #2ed573;
+  padding: 10px;
+  border-radius: 8px;
+  text-align: center;
+  margin-top: 15px;
+  font-weight: bold;
 }
