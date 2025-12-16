@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: List
 items:
-# --- PLANTILLA DE DESPLIEGUE PARA TRÁFICO ---
+# --- TRÁFICO ---
 - apiVersion: apps/v1
   kind: Deployment
   metadata:
@@ -16,6 +16,10 @@ items:
         labels:
           app: ms-trafico
       spec:
+        initContainers:
+        - name: wait-for-db
+          image: busybox:1.28
+          command: ['sh', '-c', "until nslookup wakanda-db; do echo waiting for wakanda-db; sleep 2; done"]
         containers:
         - name: app
           image: wakanda/trafico:latest
@@ -24,11 +28,11 @@ items:
           - containerPort: 8000
           env:
           - name: DATABASE_URL
-            value: "postgresql+asyncpg://postgres:password@wakanda-db:5432/traffic_db"
+            value: "postgresql+asyncpg://admin:admin@wakanda-db:5432/traffic_db"
 - apiVersion: v1
   kind: Service
   metadata:
-    name: gestion-trafico # Nombre DNS interno
+    name: gestion-trafico
   spec:
     selector:
       app: ms-trafico
@@ -50,13 +54,17 @@ items:
         labels:
           app: ms-energia
       spec:
+        initContainers:
+        - name: wait-for-db
+          image: busybox:1.28
+          command: ['sh', '-c', "until nslookup wakanda-db; do echo waiting for wakanda-db; sleep 2; done"]
         containers:
         - name: app
           image: wakanda/energia:latest
           imagePullPolicy: IfNotPresent
           env:
           - name: DATABASE_URL
-            value: "postgresql+asyncpg://postgres:password@wakanda-db:5432/energy_db"
+            value: "postgresql+asyncpg://admin:admin@wakanda-db:5432/energy_db"
 - apiVersion: v1
   kind: Service
   metadata:
@@ -82,13 +90,17 @@ items:
         labels:
           app: ms-agua
       spec:
+        initContainers:
+        - name: wait-for-db
+          image: busybox:1.28
+          command: ['sh', '-c', "until nslookup wakanda-db; do echo waiting for wakanda-db; sleep 2; done"]
         containers:
         - name: app
           image: wakanda/agua:latest
           imagePullPolicy: IfNotPresent
           env:
           - name: DATABASE_URL
-            value: "postgresql+asyncpg://postgres:password@wakanda-db:5432/water_db"
+            value: "postgresql+asyncpg://admin:admin@wakanda-db:5432/water_db"
 - apiVersion: v1
   kind: Service
   metadata:
@@ -114,13 +126,17 @@ items:
         labels:
           app: ms-residuos
       spec:
+        initContainers:
+        - name: wait-for-db
+          image: busybox:1.28
+          command: ['sh', '-c', "until nslookup wakanda-db; do echo waiting for wakanda-db; sleep 2; done"]
         containers:
         - name: app
           image: wakanda/residuos:latest
           imagePullPolicy: IfNotPresent
           env:
           - name: DATABASE_URL
-            value: "postgresql+asyncpg://postgres:password@wakanda-db:5432/waste_db"
+            value: "postgresql+asyncpg://admin:admin@wakanda-db:5432/waste_db"
 - apiVersion: v1
   kind: Service
   metadata:
@@ -146,13 +162,17 @@ items:
         labels:
           app: ms-seguridad
       spec:
+        initContainers:
+        - name: wait-for-db
+          image: busybox:1.28
+          command: ['sh', '-c', "until nslookup wakanda-db; do echo waiting for wakanda-db; sleep 2; done"]
         containers:
         - name: app
           image: wakanda/seguridad:latest
           imagePullPolicy: IfNotPresent
           env:
           - name: DATABASE_URL
-            value: "postgresql+asyncpg://postgres:password@wakanda-db:5432/security_db"
+            value: "postgresql+asyncpg://admin:admin@wakanda-db:5432/security_db"
 - apiVersion: v1
   kind: Service
   metadata:
@@ -178,6 +198,10 @@ items:
         labels:
           app: ms-usuarios
       spec:
+        initContainers:
+        - name: wait-for-db
+          image: busybox:1.28
+          command: ['sh', '-c', "until nslookup wakanda-db; do echo waiting for wakanda-db; sleep 2; done"]
         containers:
         - name: app
           image: wakanda/usuarios:latest
@@ -186,9 +210,10 @@ items:
           - containerPort: 8000
           env:
           - name: DATABASE_URL
-            value: "postgresql+psycopg2://postgres:password@wakanda-db:5432/users_db"
+            value: "postgresql+psycopg2://admin:admin@wakanda-db:5432/users_db"
           - name: MINIO_ENDPOINT
             value: "http://minio:9000"
+
           - name: MINIO_ACCESS_KEY
             valueFrom: { secretKeyRef: { name: wakanda-secrets, key: MINIO_ROOT_USER } }
           - name: MINIO_SECRET_KEY
