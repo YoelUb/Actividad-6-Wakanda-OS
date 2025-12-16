@@ -354,6 +354,7 @@ async def upload_avatar(file: UploadFile = File(...), user: User = Depends(get_c
                         db: Session = Depends(get_db)):
     bucket_name = "avatars"
 
+    # Asegurar que el bucket existe
     try:
         s3_client.head_bucket(Bucket=bucket_name)
     except:
@@ -362,6 +363,7 @@ async def upload_avatar(file: UploadFile = File(...), user: User = Depends(get_c
         except Exception as e:
             logger.error(f"Error creando bucket: {e}")
 
+    # CONFIGURAR POLÍTICA PÚBLICA PARA QUE EL NAVEGADOR PUEDA VER LA IMAGEN
     try:
         policy = {
             "Version": "2012-10-17",

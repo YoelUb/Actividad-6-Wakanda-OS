@@ -111,6 +111,7 @@ function App() {
         }
     }, [token]);
 
+    // Cargar datos del usuario al entrar al dashboard
     useEffect(() => {
         if (token && view === 'dashboard') {
             axios.get(`${USERS_API}/me`, {
