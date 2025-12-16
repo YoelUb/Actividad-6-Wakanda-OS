@@ -10,7 +10,8 @@ export default function UserProfile({ token, onLogout, onBackToHome }) {
   const [msg, setMsg] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(null);
-  const [imageHash, setImageHash] = useState(Date.now()); // Para forzar recarga de imagen
+  const [imageHash, setImageHash] = useState(Date.now());
+  const [exiting, setExiting] = useState(false);
 
   const config = {
     headers: {
@@ -60,6 +61,13 @@ export default function UserProfile({ token, onLogout, onBackToHome }) {
     }
   };
 
+  const handleBack = () => {
+    setExiting(true);
+    setTimeout(() => {
+      onBackToHome();
+    }, 450);
+  };
+
   const handleAvatarUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -87,7 +95,6 @@ export default function UserProfile({ token, onLogout, onBackToHome }) {
       });
       setMsg("✅ Avatar actualizado correctamente");
 
-      // Forzar actualización visual
       setImageHash(Date.now());
       await fetchUser();
 
@@ -130,7 +137,7 @@ export default function UserProfile({ token, onLogout, onBackToHome }) {
       <div className="profile-wrapper">
         <div className="error-msg">
           No se pudo cargar el perfil.
-          <button onClick={fetchUser} className="team-btn secondary">
+          <button onClick={fetchUser} className="team-btn secondary" style={{marginTop: '15px'}}>
             Reintentar
           </button>
         </div>
@@ -140,10 +147,10 @@ export default function UserProfile({ token, onLogout, onBackToHome }) {
 
   return (
     <div className="profile-wrapper">
-      <div className="profile-card">
+      <div className={`profile-card ${exiting ? 'profile-exit' : ''}`}>
         <div className="profile-navigation">
           {onBackToHome && (
-            <button onClick={onBackToHome} className="back-btn">
+            <button onClick={handleBack} className="back-btn">
               ← Volver al Home
             </button>
           )}
@@ -154,11 +161,9 @@ export default function UserProfile({ token, onLogout, onBackToHome }) {
             <label htmlFor="avatar-upload" className="avatar-label">
               {user.profile_pic_url ? (
                 <img
-                  // El parámetro 't' fuerza al navegador a recargar la imagen
                   src={`${user.profile_pic_url}?t=${imageHash}`}
                   alt="Avatar del usuario"
                   onError={(e) => {
-                    // Solo si falla REALMENTE la carga mostramos el default
                     e.target.onerror = null;
                     e.target.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNTAiIGN5PSI1MCIgcj0iNTAiIGZpbGw9IiMyMDIzMjkiLz48cGF0aCBkPSJNNjUgNDVBNTUgNTUgMCAxIDEgMzUgNDVBNTUgNTUgMCAxIDEgNjUgNDVaIiBmaWxsPSIjN2FmZmMxIi8+PHBhdGggZD0iTTUwIDI1QzQ1IDI1IDQ1IDM1IDUwIDM1QzU1IDM1IDU1IDI1IDUwIDI1WiIgZmlsbD0iI2ZmZmZmZiIvPjxjaXJjbGUgY3g9IjQwIiBjeT0iMjUiIHI9IjIiIGZpbGw9IiNmZmZmZmYiLz48Y2lyY2xlIGN4PSI2MCIgY3k9IjI1IiByPSIyIiBmaWxsPSIjZmZmZmZmIi8+PHBhdGggZD0iTTQ1IDQ1TDUwIDU1TDU1IDQ1IiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+";
                   }}
@@ -205,6 +210,34 @@ export default function UserProfile({ token, onLogout, onBackToHome }) {
             </div>
           )}
 
+          <div className="info-grid">
+            <div className="info-item">
+              <div className="info-label">ID de Usuario</div>
+              <div className="info-value">{user.id}</div>
+            </div>
+            <div className="info-item">
+              <div className="info-label">Estado</div>
+              <div className="info-value status-active">
+                <div className="status-indicator"></div>
+                Activo
+              </div>
+            </div>
+            <div className="info-item">
+              <div className="info-label">Último Cambio de Club</div>
+              <div className="info-value">
+                {user.last_team_change ?
+                  new Date(user.last_team_change).toLocaleDateString('es-ES', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  }) :
+                  'Nunca'}
+              </div>
+            </div>
+          </div>
+
           <div className="control-section">
             <h4 className="club-section-header">
               <span>⚔️ Afiliación de Club</span>
@@ -227,7 +260,7 @@ export default function UserProfile({ token, onLogout, onBackToHome }) {
                 disabled={!!timeLeft || user.team_id === 2}
               >
                 <div className="club-icon">⚡</div>
-                Pokémon
+                Pokémon League
               </button>
 
               <button
@@ -236,7 +269,7 @@ export default function UserProfile({ token, onLogout, onBackToHome }) {
                 disabled={!!timeLeft || user.team_id === 3}
               >
                 <div className="club-icon">🧙‍♂️</div>
-                Hogwarts
+                Hogwarts School
               </button>
             </div>
           </div>

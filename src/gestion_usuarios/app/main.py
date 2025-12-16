@@ -4,6 +4,7 @@ import boto3
 import smtplib
 import random
 import re
+import json
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
@@ -352,24 +353,56 @@ def verify_club(data: ClubVerify, user: User = Depends(get_current_user), db: Se
 async def upload_avatar(file: UploadFile = File(...), user: User = Depends(get_current_user),
                         db: Session = Depends(get_db)):
     bucket_name = "avatars"
+
     try:
-        s3_client.create_bucket(Bucket=bucket_name)
+        s3_client.head_bucket(Bucket=bucket_name)
     except:
-        pass
+        try:
+            s3_client.create_bucket(Bucket=bucket_name)
+        except Exception as e:
+            logger.error(f"Error creando bucket: {e}")
+
+    try:
+        policy = {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "PublicRead",
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Action": ["s3:GetObject"],
+                    "Resource": [f"arn:aws:s3:::{bucket_name}/*"]
+                }
+            ]
+        }
+        s3_client.put_bucket_policy(Bucket=bucket_name, Policy=json.dumps(policy))
+    except Exception as e:
+        logger.warning(f"No se pudo establecer política pública: {e}")
+
     file_key = f"{user.id}_{file.filename}"
-    s3_client.upload_fileobj(file.file, bucket_name, file_key, ExtraArgs={'ContentType': file.content_type})
+    try:
+        s3_client.upload_fileobj(
+            file.file,
+            bucket_name,
+            file_key,
+            ExtraArgs={'ContentType': file.content_type}
+        )
+    except Exception as e:
+        raise HTTPException(500, f"Error al subir imagen a MinIO: {e}")
+
     url = f"http://localhost:9000/{bucket_name}/{file_key}"
     user.profile_pic_url = url
     db.commit()
+
     return {"url": url}
 
 
 @app.post("/me/team")
 def change_team(team_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if user.last_team_change:
-         diff = datetime.utcnow() - user.last_team_change
-         if diff.total_seconds() < 86400:
-             raise HTTPException(400, "Espera 24 horas.")
+        diff = datetime.utcnow() - user.last_team_change
+        if diff.total_seconds() < 86400:
+            raise HTTPException(400, "Espera 24 horas.")
 
     team = db.query(Team).filter(Team.id == team_id).first()
     if not team: raise HTTPException(404, "Equipo no encontrado")

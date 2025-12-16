@@ -101,6 +101,7 @@ function App() {
     const [token, setToken] = useState(localStorage.getItem('wakanda_token'));
     const [activeServices] = useState(6);
     const [secretCode, setSecretCode] = useState('');
+    const [currentUser, setCurrentUser] = useState(null);
 
     useEffect(() => {
         if (token) {
@@ -109,6 +110,16 @@ function App() {
             setView('login');
         }
     }, [token]);
+
+    useEffect(() => {
+        if (token && view === 'dashboard') {
+            axios.get(`${USERS_API}/me`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            .then(res => setCurrentUser(res.data))
+            .catch(err => console.error("Error cargando perfil", err));
+        }
+    }, [token, view]);
 
     const handleLoginSuccess = (accessToken) => {
         localStorage.setItem('wakanda_token', accessToken);
@@ -120,6 +131,7 @@ function App() {
         localStorage.removeItem('wakanda_token');
         setToken(null);
         setView('login');
+        setCurrentUser(null);
     };
 
     const handleSecretAccess = async (password) => {
@@ -170,9 +182,29 @@ function App() {
                         <div className="stat-value">{activeServices}</div>
                         <div className="stat-label">Sistemas</div>
                     </div>
+
                     <button className="vibranium-btn secondary" onClick={() => setView('profile')}
-                            style={{width: 'auto'}}>
-                        👤 MI PERFIL
+                            style={{width: 'auto', display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 15px'}}>
+                        {currentUser && currentUser.profile_pic_url ? (
+                            <img
+                                src={currentUser.profile_pic_url}
+                                alt="Profile"
+                                style={{
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '50%',
+                                    objectFit: 'cover',
+                                    border: '2px solid var(--neon-blue)'
+                                }}
+                                onError={(e) => {
+                                    e.target.onerror = null;
+                                    e.target.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNTAiIGN5PSI1MCIgcj0iNTAiIGZpbGw9IiMyMDIzMjkiLz48cGF0aCBkPSJNNjUgNDVBNTUgNTUgMCAxIDEgMzUgNDVBNTUgNTUgMCAxIDEgNjUgNDVaIiBmaWxsPSIjN2FmZmMxIi8+PHBhdGggZD0iTTUwIDI1QzQ1IDI1IDQ1IDM1IDUwIDM1QzU1IDM1IDU1IDI1IDUwIDI1WiIgZmlsbD0iI2ZmZmZmZiIvPjxjaXJjbGUgY3g9IjQwIiBjeT0iMjUiIHI9IjIiIGZpbGw9IiNmZmZmZmYiLz48Y2lyY2xlIGN4PSI2MCIgY3k9IjI1IiByPSIyIiBmaWxsPSIjZmZmZmZmIi8+PHBhdGggZD0iTTQ1IDQ1TDUwIDU1TDU1IDQ1IiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+";
+                                }}
+                            />
+                        ) : (
+                            <span style={{fontSize: '1.2rem'}}>👤</span>
+                        )}
+                        <span>MI PERFIL</span>
                     </button>
                 </div>
             </header>
