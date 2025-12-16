@@ -1,0 +1,214 @@
+apiVersion: v1
+kind: List
+items:
+# --- PLANTILLA DE DESPLIEGUE PARA TRÁFICO ---
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ms-trafico
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: ms-trafico
+    template:
+      metadata:
+        labels:
+          app: ms-trafico
+      spec:
+        containers:
+        - name: app
+          image: wakanda/trafico:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+          - containerPort: 8000
+          env:
+          - name: DATABASE_URL
+            value: "postgresql+asyncpg://postgres:password@wakanda-db:5432/traffic_db"
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: gestion-trafico # Nombre DNS interno
+  spec:
+    selector:
+      app: ms-trafico
+    ports:
+      - port: 8000
+
+# --- ENERGÍA ---
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ms-energia
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: ms-energia
+    template:
+      metadata:
+        labels:
+          app: ms-energia
+      spec:
+        containers:
+        - name: app
+          image: wakanda/energia:latest
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: DATABASE_URL
+            value: "postgresql+asyncpg://postgres:password@wakanda-db:5432/energy_db"
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: gestion-energia
+  spec:
+    selector:
+      app: ms-energia
+    ports:
+      - port: 8000
+
+# --- AGUA ---
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ms-agua
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: ms-agua
+    template:
+      metadata:
+        labels:
+          app: ms-agua
+      spec:
+        containers:
+        - name: app
+          image: wakanda/agua:latest
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: DATABASE_URL
+            value: "postgresql+asyncpg://postgres:password@wakanda-db:5432/water_db"
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: gestion-agua
+  spec:
+    selector:
+      app: ms-agua
+    ports:
+      - port: 8000
+
+# --- RESIDUOS ---
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ms-residuos
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: ms-residuos
+    template:
+      metadata:
+        labels:
+          app: ms-residuos
+      spec:
+        containers:
+        - name: app
+          image: wakanda/residuos:latest
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: DATABASE_URL
+            value: "postgresql+asyncpg://postgres:password@wakanda-db:5432/waste_db"
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: gestion-residuos
+  spec:
+    selector:
+      app: ms-residuos
+    ports:
+      - port: 8000
+
+# --- SEGURIDAD ---
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ms-seguridad
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: ms-seguridad
+    template:
+      metadata:
+        labels:
+          app: ms-seguridad
+      spec:
+        containers:
+        - name: app
+          image: wakanda/seguridad:latest
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: DATABASE_URL
+            value: "postgresql+asyncpg://postgres:password@wakanda-db:5432/security_db"
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: seguridad-vigilancia
+  spec:
+    selector:
+      app: ms-seguridad
+    ports:
+      - port: 8000
+
+# --- USUARIOS ---
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ms-usuarios
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: ms-usuarios
+    template:
+      metadata:
+        labels:
+          app: ms-usuarios
+      spec:
+        containers:
+        - name: app
+          image: wakanda/usuarios:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+          - containerPort: 8000
+          env:
+          - name: DATABASE_URL
+            value: "postgresql+psycopg2://postgres:password@wakanda-db:5432/users_db"
+          - name: MINIO_ENDPOINT
+            value: "http://minio:9000"
+          - name: MINIO_ACCESS_KEY
+            valueFrom: { secretKeyRef: { name: wakanda-secrets, key: MINIO_ROOT_USER } }
+          - name: MINIO_SECRET_KEY
+            valueFrom: { secretKeyRef: { name: wakanda-secrets, key: MINIO_ROOT_PASSWORD } }
+          - name: SECRET_KEY
+            valueFrom: { secretKeyRef: { name: wakanda-secrets, key: SECRET_KEY } }
+          - name: MAIL_USERNAME
+            valueFrom: { secretKeyRef: { name: wakanda-secrets, key: MAIL_USERNAME } }
+          - name: MAIL_PASSWORD
+            valueFrom: { secretKeyRef: { name: wakanda-secrets, key: MAIL_PASSWORD } }
+          - name: MAIL_SERVER
+            value: "smtp.gmail.com"
+          - name: MAIL_PORT
+            value: "587"
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: gestion-usuarios
+  spec:
+    selector:
+      app: ms-usuarios
+    ports:
+      - port: 8000

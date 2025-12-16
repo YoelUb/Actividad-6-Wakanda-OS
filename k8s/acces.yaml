@@ -1,0 +1,83 @@
+# --- GATEWAY API ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ms-gateway
+  template:
+    metadata:
+      labels:
+        app: ms-gateway
+    spec:
+      containers:
+      - name: app
+        image: wakanda/gateway:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+        env:
+        - name: TRAFFIC_SERVICE_URL
+          value: "http://gestion-trafico:8000"
+        - name: ENERGY_SERVICE_URL
+          value: "http://gestion-energia:8000"
+        - name: WATER_SERVICE_URL
+          value: "http://gestion-agua:8000"
+        - name: WASTE_SERVICE_URL
+          value: "http://gestion-residuos:8000"
+        - name: SECURITY_SERVICE_URL
+          value: "http://seguridad-vigilancia:8000"
+        - name: USERS_SERVICE_URL
+          value: "http://gestion-usuarios:8000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-api
+spec:
+  selector:
+    app: ms-gateway
+  ports:
+    - port: 8000
+      targetPort: 8000
+      nodePort: 30006
+  type: NodePort
+
+# --- FRONTEND ---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wakanda-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wakanda-frontend
+  template:
+    metadata:
+      labels:
+        app: wakanda-frontend
+    spec:
+      containers:
+      - name: app
+        image: wakanda/frontend:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wakanda-frontend
+spec:
+  selector:
+    app: wakanda-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30000
+  type: NodePort
