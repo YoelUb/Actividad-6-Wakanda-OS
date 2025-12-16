@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import './UserProfile.css';
 
-const USERS_API = "http://localhost:8006";
+const USERS_API = "http://localhost:30006";
 
 export default function UserProfile({ token, onLogout, onBackToHome }) {
   const [user, setUser] = useState(null);

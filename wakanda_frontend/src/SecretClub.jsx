@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import axios from 'axios'
 import "./SecretClub.css"
 
-const API_URL = "http://localhost:8000"
+const API_URL = "http://localhost:30006";
 const MAX_CHARACTER_ID = 826
 
 function CharacterCard({ char }) {
