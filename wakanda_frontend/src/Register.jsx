@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import axios from 'axios';
 import './Register.css';
 
@@ -14,7 +14,6 @@ export default function Register({ switchToLogin }) {
   });
 
   const [showPassword, setShowPassword] = useState(false);
-  const [secret, setSecret] = useState(null);
   const [error, setError] = useState('');
   const [touched, setTouched] = useState({
     name: false,
@@ -96,43 +95,20 @@ export default function Register({ switchToLogin }) {
     data.append('team_id', formData.teamId);
 
     try {
-      const res = await axios.post(`${USERS_API}/register`, data);
-      setSecret(res.data['2fa_secret']);
+      await axios.post(`${USERS_API}/register`, data);
+
+      // ALERTA: Notificar al usuario antes de cambiar de pantalla
+      alert(`Registro exitoso. Se ha enviado un código a ${formData.email}. Úsalo para iniciar sesión.`);
+
+      // Redirigir al usuario al Login para que verifique su cuenta
+      switchToLogin();
+
     } catch (err) {
       setError(err.response?.data?.detail || "Error en el sistema de registro");
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  if (secret) {
-    return (
-      <div className="register-container">
-        <div className="register-box">
-          <h2>✅ ACCESO CONCEDIDO</h2>
-          <p className="welcome-text">
-            Bienvenido, <strong>{formData.name}</strong>.
-          </p>
-          <p className="secret-info">
-            Tu clave de seguridad 2FA (TOTP) es:
-          </p>
-
-          <div className="secret-key-display">
-            {secret}
-          </div>
-
-          <p className="setup-instructions">
-            Configura esta clave en Google Authenticator o Authy.
-            También recibirás un código por email.
-          </p>
-
-          <button className="vibranium-btn" onClick={switchToLogin}>
-            INICIAR SESIÓN
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="register-container">

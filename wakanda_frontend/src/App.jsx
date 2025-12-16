@@ -9,6 +9,7 @@ import UserProfile from './UserProfile';
 import './App.css';
 
 const GATEWAY_URL = 'http://localhost:8000';
+const USERS_API = 'http://localhost:8006';
 
 function ServiceCard({title, endpoint, icon, theme = 'default'}) {
     const [data, setData] = useState(null);
@@ -99,6 +100,7 @@ function App() {
     const [view, setView] = useState('login');
     const [token, setToken] = useState(localStorage.getItem('wakanda_token'));
     const [activeServices] = useState(6);
+    const [secretCode, setSecretCode] = useState('');
 
     useEffect(() => {
         if (token) {
@@ -120,11 +122,21 @@ function App() {
         setView('login');
     };
 
-    const handleSecretAccess = (password) => {
-        if (password === '123456789') setView('rickmorty');
-        else if (password === '987654321') setView('pokemon');
-        else if (password === '123456') setView('harrypotter');
-        alert('⛔ ACCESO DENEGADO: Código de autorización inválido');
+    const handleSecretAccess = async (password) => {
+        try {
+            const res = await axios.post(
+                `${USERS_API}/clubs/verify`,
+                { password: password },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (res.data.status === 'ok') {
+                setView(res.data.view);
+                setSecretCode('');
+            }
+        } catch (err) {
+            alert(err.response?.data?.detail || '⛔ ACCESO DENEGADO: Contraseña incorrecta');
+        }
     };
 
     if (!token && view === 'register') {
@@ -138,7 +150,7 @@ function App() {
     if (view === 'rickmorty') return <SecretClub onExit={() => setView('dashboard')}/>;
     if (view === 'pokemon') return <PokemonClub onExit={() => setView('dashboard')}/>;
     if (view === 'harrypotter') return <HogwartsClub onExit={() => setView('dashboard')}/>;
-    if (view === 'profile') return <UserProfile token={token} onLogout={handleLogout}/>;
+    if (view === 'profile') return <UserProfile token={token} onLogout={handleLogout} onBackToHome={() => setView('dashboard')}/>;
 
     return (
         <div className="wakanda-dashboard">
@@ -184,11 +196,19 @@ function App() {
                                 placeholder="Código de Acceso"
                                 className="password-input"
                                 style={{fontSize: '1rem', padding: '10px'}}
+                                value={secretCode}
+                                onChange={(e) => setSecretCode(e.target.value)}
                                 onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleSecretAccess(e.target.value);
+                                    if (e.key === 'Enter') handleSecretAccess(secretCode);
                                 }}
                             />
-                            <p style={{fontSize: '0.7rem', color: '#888'}}>Pulsa Enter para acceder</p>
+                            <button
+                                className="vibranium-btn"
+                                style={{marginTop: '10px'}}
+                                onClick={() => handleSecretAccess(secretCode)}
+                            >
+                                ACCEDER
+                            </button>
                         </div>
                     </div>
                 </div>

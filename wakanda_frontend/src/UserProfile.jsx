@@ -10,6 +10,7 @@ export default function UserProfile({ token, onLogout, onBackToHome }) {
   const [msg, setMsg] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(null);
+  const [imageHash, setImageHash] = useState(Date.now()); // Para forzar recarga de imagen
 
   const config = {
     headers: {
@@ -85,7 +86,11 @@ export default function UserProfile({ token, onLogout, onBackToHome }) {
         }
       });
       setMsg("✅ Avatar actualizado correctamente");
-      fetchUser();
+
+      // Forzar actualización visual
+      setImageHash(Date.now());
+      await fetchUser();
+
     } catch (err) {
       setMsg(err.response?.data?.detail || "Error al subir la imagen");
     } finally {
@@ -100,16 +105,6 @@ export default function UserProfile({ token, onLogout, onBackToHome }) {
       fetchUser();
     } catch (err) {
       setMsg(err.response?.data?.detail || "No puedes cambiar de club todavía");
-    }
-  };
-
-  const toggle2FA = async (method) => {
-    try {
-      await axios.post(`${USERS_API}/me/2fa/enable?method=${method}`, {}, config);
-      setMsg(`✅ 2FA cambiado a modo: ${method === 'APP' ? 'Google Auth' : 'Email OTP'}`);
-      fetchUser();
-    } catch (err) {
-      setMsg(err.response?.data?.detail || "Error al cambiar configuración 2FA");
     }
   };
 
@@ -159,9 +154,11 @@ export default function UserProfile({ token, onLogout, onBackToHome }) {
             <label htmlFor="avatar-upload" className="avatar-label">
               {user.profile_pic_url ? (
                 <img
-                  src={user.profile_pic_url}
+                  // El parámetro 't' fuerza al navegador a recargar la imagen
+                  src={`${user.profile_pic_url}?t=${imageHash}`}
                   alt="Avatar del usuario"
                   onError={(e) => {
+                    // Solo si falla REALMENTE la carga mostramos el default
                     e.target.onerror = null;
                     e.target.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNTAiIGN5PSI1MCIgcj0iNTAiIGZpbGw9IiMyMDIzMjkiLz48cGF0aCBkPSJNNjUgNDVBNTUgNTUgMCAxIDEgMzUgNDVBNTUgNTUgMCAxIDEgNjUgNDVaIiBmaWxsPSIjN2FmZmMxIi8+PHBhdGggZD0iTTUwIDI1QzQ1IDI1IDQ1IDM1IDUwIDM1QzU1IDM1IDU1IDI1IDUwIDI1WiIgZmlsbD0iI2ZmZmZmZiIvPjxjaXJjbGUgY3g9IjQwIiBjeT0iMjUiIHI9IjIiIGZpbGw9IiNmZmZmZmYiLz48Y2lyY2xlIGN4PSI2MCIgY3k9IjI1IiByPSIyIiBmaWxsPSIjZmZmZmZmIi8+PHBhdGggZD0iTTQ1IDQ1TDUwIDU1TDU1IDQ1IiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+";
                   }}
@@ -171,6 +168,7 @@ export default function UserProfile({ token, onLogout, onBackToHome }) {
                   <span>👤</span>
                 </div>
               )}
+              <div className="avatar-edit-icon">📸</div>
             </label>
             <input
               id="avatar-upload"
@@ -178,6 +176,7 @@ export default function UserProfile({ token, onLogout, onBackToHome }) {
               accept="image/*"
               onChange={handleAvatarUpload}
               disabled={isUploading}
+              style={{ display: 'none' }}
             />
             {isUploading && (
               <div className="upload-overlay">
@@ -187,9 +186,10 @@ export default function UserProfile({ token, onLogout, onBackToHome }) {
           </div>
 
           <div className="profile-info">
-            <h3>{user.name} {user.last_name}</h3>
+            <h2 className="user-name">{user.name} {user.last_name}</h2>
+            <div className="user-email">{user.email}</div>
             <div className="profile-role">
-              {user.team_id ? `🏆 Miembro de ${getTeamName(user.team_id)}` : '🔓 Agente Libre'}
+              {user.team_id ? `🏆 ${getTeamName(user.team_id)}` : '🔓 Agente Libre'}
             </div>
           </div>
 
@@ -204,66 +204,6 @@ export default function UserProfile({ token, onLogout, onBackToHome }) {
               {msg}
             </div>
           )}
-
-          <div className="info-grid">
-            <div className="info-item">
-              <span className="info-label">📧 Email</span>
-              <span className="info-value">{user.email}</span>
-            </div>
-
-            <div className="info-item">
-              <span className="info-label">🛡️ Seguridad 2FA</span>
-              <span className="info-value status-active">
-                <span
-                  className="status-indicator"
-                  style={{
-                    backgroundColor: user.is_2fa_enabled ? '#2ed573' : '#ff4757',
-                    boxShadow: `0 0 15px ${user.is_2fa_enabled ? '#2ed573' : '#ff4757'}`
-                  }}
-                ></span>
-                {user.is_2fa_enabled
-                  ? `ACTIVO (${user.preferred_2fa_method === 'APP' ? 'Google Auth' : 'Email OTP'})`
-                  : 'INACTIVO'}
-              </span>
-            </div>
-
-            <div className="info-item">
-              <span className="info-label">📅 Ultimo Cambio</span>
-              <span className="info-value">
-                {user.last_team_change ? new Date(user.last_team_change).toLocaleDateString() : 'Nunca'}
-              </span>
-            </div>
-          </div>
-
-          <div className="control-section">
-            <h4>🛡️ Configuración de Seguridad</h4>
-            <div className="action-buttons">
-              <button
-                className={`team-btn ${user.preferred_2fa_method === 'APP' ? 'active' : ''}`}
-                onClick={() => toggle2FA('APP')}
-                disabled={user.is_2fa_enabled && user.preferred_2fa_method === 'APP'}
-              >
-                {user.preferred_2fa_method === 'APP' ? '✓ ' : ''}
-                Usar Google Auth
-              </button>
-
-              <button
-                className={`team-btn ${user.preferred_2fa_method === 'EMAIL' ? 'active' : ''}`}
-                onClick={() => toggle2FA('EMAIL')}
-                disabled={user.is_2fa_enabled && user.preferred_2fa_method === 'EMAIL'}
-              >
-                {user.preferred_2fa_method === 'EMAIL' ? '✓ ' : ''}
-                Usar Email OTP
-              </button>
-
-              <button
-                className="team-btn secondary"
-                onClick={() => document.getElementById('avatar-upload').click()}
-              >
-                {isUploading ? '📤 Subiendo...' : '📸 Cambiar Avatar'}
-              </button>
-            </div>
-          </div>
 
           <div className="control-section">
             <h4 className="club-section-header">

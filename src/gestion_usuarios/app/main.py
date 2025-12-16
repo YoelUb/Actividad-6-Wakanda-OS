@@ -55,11 +55,13 @@ engine = create_engine(DATABASE_URL.replace("+asyncpg", ""))
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
+
 class Team(Base):
     __tablename__ = "teams"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True)
     description = Column(String)
+
 
 class User(Base):
     __tablename__ = "users"
@@ -87,10 +89,13 @@ class User(Base):
 
     club_password = Column(String, nullable=True)
 
+
 Base.metadata.create_all(bind=engine)
+
 
 class ClubVerify(BaseModel):
     password: str
+
 
 def init_teams():
     db = SessionLocal()
@@ -111,10 +116,12 @@ def init_teams():
     finally:
         db.close()
 
+
 init_teams()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
 
 def get_db():
     db = SessionLocal()
@@ -123,11 +130,13 @@ def get_db():
     finally:
         db.close()
 
+
 def create_access_token(data: dict):
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
@@ -140,26 +149,16 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if not user: raise HTTPException(status_code=401)
     return user
 
-def send_verification_email(to_email: str, code: str):
+
+def send_email(to_email: str, subject: str, body: str):
     if not MAIL_USERNAME or not MAIL_PASSWORD:
-        logger.warning(f"CODE para {to_email}: {code}")
+        logger.warning(f"Simulando envío email a {to_email}: {subject}")
         return
 
     msg = MIMEMultipart()
     msg['From'] = MAIL_FROM
     msg['To'] = to_email
-    msg['Subject'] = "Codigo de Verificacion - Wakanda OS"
-
-    body = f"""
-    <html>
-      <body>
-        <h2>Wakanda OS</h2>
-        <p>Tu código de seguridad es:</p>
-        <h1>{code}</h1>
-        <p>Válido por 20 minutos.</p>
-      </body>
-    </html>
-    """
+    msg['Subject'] = subject
     msg.attach(MIMEText(body, 'html'))
 
     try:
@@ -171,39 +170,69 @@ def send_verification_email(to_email: str, code: str):
         server.quit()
     except Exception as e:
         logger.error(f"Fallo al enviar email: {e}")
-        logger.info(f"FALLBACK CODE para {to_email}: {code}")
 
-def send_account_verified_email(to_email: str, club_password: str):
-    if not MAIL_USERNAME or not MAIL_PASSWORD:
-        logger.warning(f"Cuenta verificada. Club Password: {club_password}")
-        return
 
-    msg = MIMEMultipart()
-    msg['From'] = MAIL_FROM
-    msg['To'] = to_email
-    msg['Subject'] = "Bienvenido al Club VIP Wakanda"
-
+def send_verification_email(to_email: str, code: str):
     body = f"""
+    <!DOCTYPE html>
     <html>
-      <body>
-        <h2>¡Cuenta Verificada!</h2>
-        <p>Tu contraseña única para el Club VIP es:</p>
-        <h1 style="color: #bd00ff">{club_password}</h1>
-        <p>Guárdala en lugar seguro.</p>
-      </body>
+    <head><meta charset="UTF-8"></head>
+    <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+            <h2 style="color: #667eea; text-align: center;">🛡️ Verificación Wakanda OS</h2>
+            <p style="text-align: center; color: #555;">Tu código de seguridad es:</p>
+            <div style="background: #f0f4f8; padding: 15px; text-align: center; font-size: 32px; letter-spacing: 5px; font-weight: bold; color: #333; border-radius: 5px; margin: 20px 0;">
+                {code}
+            </div>
+            <p style="text-align: center; color: #888; font-size: 12px;">Válido por 20 minutos. No lo compartas.</p>
+        </div>
+    </body>
     </html>
     """
-    msg.attach(MIMEText(body, 'html'))
+    send_email(to_email, "Codigo de Verificacion - Wakanda OS", body)
 
-    try:
-        server = smtplib.SMTP(MAIL_SERVER, MAIL_PORT)
-        server.starttls()
-        server.login(MAIL_USERNAME, MAIL_PASSWORD)
-        text = msg.as_string()
-        server.sendmail(MAIL_FROM, to_email, text)
-        server.quit()
-    except Exception as e:
-        logger.error(f"Fallo al enviar email VIP: {e}")
+
+def send_account_verified_email(to_email: str, club_password: str):
+    body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="UTF-8"></head>
+    <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; padding: 20px; color: white;">
+        <div style="max-width: 600px; margin: 0 auto; background: #2d2d2d; padding: 30px; border-radius: 15px; border: 2px solid #00eaff;">
+            <h2 style="color: #00eaff; text-align: center; text-transform: uppercase;">🚀 ¡Acceso Concedido!</h2>
+            <p style="text-align: center;">Bienvenido a la ciudadanía oficial de Wakanda.</p>
+            <div style="margin: 30px 0; text-align: center;">
+                <p style="margin-bottom: 10px; color: #bd00ff;">TU CONTRASEÑA VIP DE CLUB:</p>
+                <div style="font-family: monospace; font-size: 28px; background: rgba(189,0,255,0.1); padding: 15px; border: 1px dashed #bd00ff; border-radius: 8px;">
+                    {club_password}
+                </div>
+            </div>
+            <p style="text-align: center; color: #aaa; font-size: 14px;">Usa esta contraseña para acceder a los paneles secretos.</p>
+        </div>
+    </body>
+    </html>
+    """
+    send_email(to_email, "Bienvenido al Club VIP Wakanda", body)
+
+
+def send_team_change_email(to_email: str, team_name: str, club_password: str):
+    body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="UTF-8"></head>
+    <body style="font-family: Arial, sans-serif; background-color: #fff; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: #fff; border: 1px solid #eee; padding: 30px; border-radius: 10px;">
+            <h2 style="color: #333; text-align: center;">🔄 Cambio de Equipo Confirmado</h2>
+            <p style="text-align: center; font-size: 18px;">Ahora perteneces a: <strong>{team_name}</strong></p>
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="text-align: center; color: #555;">Te recordamos tu contraseña de acceso al Club:</p>
+            <h3 style="text-align: center; color: #d63384; font-family: monospace; font-size: 24px;">{club_password}</h3>
+        </div>
+    </body>
+    </html>
+    """
+    send_email(to_email, f"Nuevo Equipo: {team_name}", body)
+
 
 @app.post("/register")
 def register(
@@ -248,6 +277,7 @@ def register(
 
     return {"msg": "Usuario creado. Verifica tu cuenta con el código enviado al correo."}
 
+
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == form_data.username).first()
@@ -261,6 +291,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
     access_token = create_access_token({"sub": user.email, "role": user.role})
     return {"access_token": access_token, "token_type": "bearer", "status": "LOGIN_SUCCESS"}
+
 
 @app.post("/verify-account")
 def verify_account(email: str = Form(...), code: str = Form(...), db: Session = Depends(get_db)):
@@ -284,6 +315,7 @@ def verify_account(email: str = Form(...), code: str = Form(...), db: Session = 
     access_token = create_access_token({"sub": user.email, "role": user.role})
     return {"access_token": access_token, "token_type": "bearer", "msg": "Cuenta verificada"}
 
+
 @app.post("/resend-code")
 def resend_code(email: str = Form(...), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == email).first()
@@ -301,6 +333,7 @@ def resend_code(email: str = Form(...), db: Session = Depends(get_db)):
     send_verification_email(user.email, new_code)
     return {"msg": "Nuevo código enviado"}
 
+
 @app.post("/clubs/verify")
 def verify_club(data: ClubVerify, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user.club_password or user.club_password != data.password:
@@ -313,6 +346,7 @@ def verify_club(data: ClubVerify, user: User = Depends(get_current_user), db: Se
 
     view = team_map.get(user.team_id)
     return {"status": "ok", "view": view}
+
 
 @app.post("/me/avatar")
 async def upload_avatar(file: UploadFile = File(...), user: User = Depends(get_current_user),
@@ -329,12 +363,13 @@ async def upload_avatar(file: UploadFile = File(...), user: User = Depends(get_c
     db.commit()
     return {"url": url}
 
+
 @app.post("/me/team")
 def change_team(team_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if user.last_team_change:
-        diff = datetime.utcnow() - user.last_team_change
-        if diff.total_seconds() < 86400:
-            raise HTTPException(400, "Espera 24 horas.")
+         diff = datetime.utcnow() - user.last_team_change
+         if diff.total_seconds() < 86400:
+             raise HTTPException(400, "Espera 24 horas.")
 
     team = db.query(Team).filter(Team.id == team_id).first()
     if not team: raise HTTPException(404, "Equipo no encontrado")
@@ -342,7 +377,11 @@ def change_team(team_id: int, user: User = Depends(get_current_user), db: Sessio
     user.team_id = team_id
     user.last_team_change = datetime.utcnow()
     db.commit()
+
+    send_team_change_email(user.email, team.name, user.club_password)
+
     return {"message": "Equipo cambiado"}
+
 
 @app.get("/me")
 def read_users_me(user: User = Depends(get_current_user)):
