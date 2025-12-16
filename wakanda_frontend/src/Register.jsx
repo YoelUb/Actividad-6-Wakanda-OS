@@ -2,7 +2,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import './Register.css';
 
-const USERS_API = "http://localhost:8006";
+const USERS_API = "http://localhost:30006";
 
 export default function Register({ switchToLogin }) {
   const [formData, setFormData] = useState({

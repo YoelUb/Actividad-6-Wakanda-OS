@@ -2,7 +2,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import './Login.css';
 
-const USERS_API = "http://localhost:8006";
+const USERS_API = "http://localhost:30006";
 
 export default function Login({ onLoginSuccess, switchToRegister }) {
   const [email, setEmail] = useState('');

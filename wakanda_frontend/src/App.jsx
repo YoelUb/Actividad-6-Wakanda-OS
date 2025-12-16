@@ -8,8 +8,8 @@ import Register from './Register';
 import UserProfile from './UserProfile';
 import './App.css';
 
-const GATEWAY_URL = 'http://localhost:8000';
-const USERS_API = 'http://localhost:8006';
+const GATEWAY_URL = 'http://localhost:30006';
+const USERS_API = 'http://localhost:30006';
 
 function ServiceCard({title, endpoint, icon, theme = 'default'}) {
     const [data, setData] = useState(null);

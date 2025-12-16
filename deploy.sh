@@ -28,7 +28,7 @@ wait
 echo "Imágenes construidas."
 
 # 3. Desplegar en Kubernetes en orden
-echo "☸Desplegando en Kubernetes..."
+echo "Desplegando en Kubernetes..."
 
 kubectl apply -f k8s/config-secrets.yaml
 kubectl apply -f k8s/infraestructure.yaml
