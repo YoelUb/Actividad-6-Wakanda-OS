@@ -8,13 +8,14 @@ export default function AdminPanel({ onExit }) {
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [pulseEffect, setPulseEffect] = useState(true);
+  const [restarting, setRestarting] = useState({});
 
   const services = [
-    { key: 'traffic', url: '/traffic/status', name: 'TRÁFICO AÉREO', icon: '🛸', theme: 'traffic', deployName: 'gestion-trafico' },
-    { key: 'energy', url: '/energy/grid', name: 'RED VIBRANIUM', icon: '⚡', theme: 'energy', deployName: 'gestion-energia' },
-    { key: 'water', url: '/water/pressure', name: 'HIDROELÉCTRICA', icon: '💧', theme: 'water', deployName: 'gestion-agua' },
-    { key: 'waste', url: '/waste/status', name: 'GESTIÓN DE RESIDUOS', icon: '♻️', theme: 'waste', deployName: 'gestion-residuos' },
-    { key: 'security', url: '/security/alerts', name: 'DEFENSA FRONTERIZA', icon: '🛡️', theme: 'security', deployName: 'seguridad-vigilancia' }
+    { key: 'traffic', url: '/traffic/status', name: 'TRÁFICO AÉREO', icon: '🛸', theme: 'traffic', deployName: 'ms-trafico' },
+    { key: 'energy', url: '/energy/grid', name: 'RED VIBRANIUM', icon: '⚡', theme: 'energy', deployName: 'ms-energia' },
+    { key: 'water', url: '/water/pressure', name: 'HIDROELÉCTRICA', icon: '💧', theme: 'water', deployName: 'ms-agua' },
+    { key: 'waste', url: '/waste/status', name: 'GESTIÓN DE RESIDUOS', icon: '♻️', theme: 'waste', deployName: 'ms-residuos' },
+    { key: 'security', url: '/security/alerts', name: 'DEFENSA FRONTERIZA', icon: '🛡️', theme: 'security', deployName: 'ms-seguridad' }
   ];
 
   useEffect(() => {
@@ -33,28 +34,37 @@ export default function AdminPanel({ onExit }) {
         .then(res => ({ key: s.key, data: res.data }))
         .catch(() => ({ key: s.key, error: true }))
     );
-
     const results = await Promise.all(promises);
     const newStats = {};
-    results.forEach(r => newStats[r.key] = r.data || { status: 'OFFLINE', lastUpdate: new Date().toLocaleTimeString() });
+    results.forEach(r => {
+      newStats[r.key] = r.data || { status: 'OFFLINE', lastUpdate: new Date().toLocaleTimeString() };
+    });
     setStats(newStats);
     setLoading(false);
   };
 
   const handleRestart = async (deployName, serviceTitle) => {
-    if (!confirm(`⚠ ¿ESTÁS SEGURO?\n\nVas a reiniciar el servicio de ${serviceTitle}.\nEsto puede causar cortes temporales.`)) return;
+    if (restarting[deployName]) return;
+    const confirmed = window.confirm(`⚠ ALERTA DE SISTEMA\n\n¿Reiniciar ${serviceTitle}?`);
+    if (!confirmed) return;
 
+    setRestarting(prev => ({ ...prev, [deployName]: true }));
     try {
-        const res = await axios.post(`${GATEWAY_URL}/admin/restart/${deployName}`);
-        if(res.data.error) {
-            alert(`❌ Error: ${res.data.error}`);
-        } else {
-            alert(`✅ COMANDO ENVIADO: ${res.data.status}`);
-            setStats(prev => ({...prev, [services.find(s=>s.deployName===deployName).key]: { status: 'RESTARTING...' } }));
-        }
-    } catch (e) {
-        alert("❌ Error de comunicación con el Gateway");
+      const res = await axios.post(`${GATEWAY_URL}/admin/restart/${deployName}`, {}, { timeout: 15000 });
+      alert(res.data.error ? `❌ Error: ${res.data.error}` : `✅ COMANDO ENVIADO: ${res.data.status}`);
+    } catch (error) {
+      alert("❌ Error crítico: Gateway no responde");
+    } finally {
+      setTimeout(() => {
+        setRestarting(prev => ({ ...prev, [deployName]: false }));
+        fetchAllStats();
+      }, 5000);
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token'); // Limpieza real de sesión
+    onExit();
   };
 
   return (
@@ -86,9 +96,8 @@ export default function AdminPanel({ onExit }) {
             <div className="pulse-dot"></div>
             <span>SISTEMA ACTIVO</span>
           </div>
-          <button className="cyber-btn-exit" onClick={onExit}>
-            <span className="btn-text">SALIR MODO DIOS</span>
-            <span className="btn-glow"></span>
+          <button className="cyber-btn-exit" onClick={handleLogout}>
+            <span className="btn-text">SALIR</span>
           </button>
         </div>
       </header>
@@ -96,84 +105,56 @@ export default function AdminPanel({ onExit }) {
       <main className="dashboard-main">
         {loading ? (
           <div className="cyber-loader">
-            <p className="loader-text">CONECTANDO CON SATÉLITES...</p>
+            <p className="loader-text">SINCRONIZANDO...</p>
           </div>
         ) : (
-          <>
-            <div className="services-grid">
-              {services.map(s => {
-                const data = stats[s.key];
-                const isError = !data || data.status === 'OFFLINE' || data.error;
-                const isWarning = data?.status === 'WARNING';
-                const isRestarting = data?.status === 'RESTARTING...';
-
-                return (
-                  <div key={s.key} className={`service-card ${s.theme}-theme`}>
-                    <div className="card-glow"></div>
-                    <div className="card-header">
-                      <div className="card-icon">{s.icon}</div>
-                      <h3>{s.name}</h3>
-                      <div className={`status-indicator ${isError ? 'status-error' : isRestarting ? 'status-warning' : 'status-ok'}`}>
-                        <div className="status-light"></div>
-                        <span>{isError ? 'OFFLINE' : isRestarting ? 'REBOOTING' : 'ONLINE'}</span>
-                      </div>
-                    </div>
-
-                    <div className="card-body">
-                      {isError ? (
-                        <div className="error-display">
-                          <span className="error-icon">⚠</span>
-                          <p>SISTEMA CAÍDO</p>
-                        </div>
-                      ) : (
-                        <div className="data-display">
-                           <div className="data-grid">
-                            {Object.entries(data).map(([key, value]) => (
-                              <div key={key} className="data-row">
-                                <span className="data-label">{key.toUpperCase()}</span>
-                                <span className="data-value">{String(value)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="card-footer" style={{justifyContent: 'space-between'}}>
-                         <span className="update-time">{data.lastUpdate || ''}</span>
-                         <button
-                            className="cyber-action-btn"
-                            style={{backgroundColor: '#ff4757', border: 'none', padding: '5px 10px', fontSize: '0.8rem'}}
-                            onClick={() => handleRestart(s.deployName, s.name)}
-                         >
-                            💣 REINICIAR
-                         </button>
+          <div className="services-grid">
+            {services.map(s => {
+              const data = stats[s.key];
+              const isError = !data || data.status === 'OFFLINE' || data.error;
+              const isRestarting = restarting[s.deployName];
+              return (
+                <div key={s.key} className={`service-card ${s.theme}-theme`}>
+                  <div className="card-glow"></div>
+                  <div className="card-header">
+                    <div className="card-icon">{s.icon}</div>
+                    <h3>{s.name}</h3>
+                    <div className={`status-indicator ${isError ? 'status-error' : isRestarting ? 'status-warning' : 'status-ok'}`}>
+                      <div className="status-light"></div>
+                      <span>{isError ? 'OFFLINE' : isRestarting ? 'REBOOTING' : 'ONLINE'}</span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-
-            <div className="citizen-control-panel">
-              <div className="panel-header">
-                <h3 className="panel-title">👥 CONTROL DE CIUDADANÍA</h3>
-                <div className="panel-status">
-                  <span className="status-badge status-active">SISTEMA ACTIVO</span>
+                  <div className="card-body">
+                    {isError ? (
+                      <div className="error-display">
+                        <span className="error-icon">⚠</span>
+                        <p>SISTEMA CAÍDO</p>
+                      </div>
+                    ) : (
+                      <div className="data-display">
+                        <div className="data-grid">
+                          {Object.entries(data).map(([key, value]) => (
+                            <div key={key} className="data-row">
+                              <span className="data-label">{key.toUpperCase()}</span>
+                              <span className="data-value">{String(value)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="card-footer">
+                    <span className="update-time">{data.lastUpdate || ''}</span>
+                    <button className="cyber-restart-btn" onClick={() => handleRestart(s.deployName, s.name)} disabled={isRestarting}>
+                      {isRestarting ? '⏳...' : '💣 REINICIAR'}
+                    </button>
+                  </div>
                 </div>
-              </div>
-
-              <div className="citizen-stats">
-                 <div className="stat-item"><div className="stat-label">ADMIN</div><div className="stat-value neon-purple">T'CHALLA</div></div>
-                 <div className="stat-item"><div className="stat-label">NIVEL</div><div className="stat-value neon-blue">OMEGA</div></div>
-              </div>
-            </div>
-          </>
+              );
+            })}
+          </div>
         )}
       </main>
-
-      <footer className="cyber-footer">
-         <div className="footer-center"><span>WAKANDA FOREVER • KUBERNETES CONTROL ENABLED</span></div>
-      </footer>
     </div>
   );
 }

@@ -97,6 +97,9 @@ Base.metadata.create_all(bind=engine)
 class ClubVerify(BaseModel):
     password: str
 
+# --- CORRECCIÓN: Definimos el contexto de seguridad ANTES de usarlo ---
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 def init_teams():
     db = SessionLocal()
@@ -126,7 +129,7 @@ def init_admin():
         if not exists:
             admin_user = User(
                 email=admin_email,
-                hashed_password=pwd_context.hash("admin123"),
+                hashed_password=pwd_context.hash("admin123"), # Ahora pwd_context ya existe
                 name="T'Challa",
                 last_name="King",
                 role="ADMIN",
@@ -143,12 +146,9 @@ def init_admin():
         db.close()
 
 
-
+# Ejecutamos la inicialización al final
 init_teams()
 init_admin()
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
 def get_db():
