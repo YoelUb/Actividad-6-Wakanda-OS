@@ -1,6 +1,8 @@
 import os
 import httpx
-from fastapi import FastAPI, HTTPException, Request
+from datetime import datetime
+from kubernetes import client, config
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from .resilience import fetch_from_service, post_to_service
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -26,11 +28,12 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins, # Usa la lista limpia
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 @app.get("/")
 async def root():
@@ -132,7 +135,6 @@ async def get_hp_detail(id: str):
 async def proxy_register(request: Request):
     form_data = await request.form()
     data = dict(form_data)
-
     async with httpx.AsyncClient() as client:
         resp = await post_to_service(f"{USERS_SERVICE_URL}/register", data=data, client=client)
         if resp.status_code >= 400:
@@ -144,7 +146,6 @@ async def proxy_register(request: Request):
 async def proxy_login(request: Request):
     form_data = await request.form()
     data = dict(form_data)
-
     async with httpx.AsyncClient() as client:
         resp = await post_to_service(f"{USERS_SERVICE_URL}/login", data=data, client=client)
         if resp.status_code >= 400:
@@ -158,7 +159,6 @@ async def proxy_verify_2fa(code: str, temp_token: str):
         url = f"{USERS_SERVICE_URL}/verify-2fa"
         params = {"code": code, "temp_token": temp_token}
         resp = await post_to_service(url, params=params, client=client)
-
         if resp.status_code >= 400:
             raise HTTPException(status_code=resp.status_code, detail=resp.json().get('detail', 'Error'))
         return resp.json()
@@ -168,7 +168,6 @@ async def proxy_verify_2fa(code: str, temp_token: str):
 async def proxy_verify_account(request: Request):
     form_data = await request.form()
     data = dict(form_data)
-
     async with httpx.AsyncClient() as client:
         resp = await post_to_service(f"{USERS_SERVICE_URL}/verify-account", data=data, client=client)
         if resp.status_code >= 400:
@@ -180,9 +179,95 @@ async def proxy_verify_account(request: Request):
 async def proxy_resend_code(request: Request):
     form_data = await request.form()
     data = dict(form_data)
-
     async with httpx.AsyncClient() as client:
         resp = await post_to_service(f"{USERS_SERVICE_URL}/resend-code", data=data, client=client)
         if resp.status_code >= 400:
             raise HTTPException(status_code=resp.status_code, detail=resp.json().get('detail', 'Error'))
         return resp.json()
+
+
+@app.get("/me")
+async def proxy_users_me(request: Request):
+    token = request.headers.get("authorization")
+    headers = {"Authorization": token} if token else {}
+    async with httpx.AsyncClient(headers=headers) as client:
+        resp = await client.get(f"{USERS_SERVICE_URL}/me")
+        if resp.status_code >= 400:
+            raise HTTPException(status_code=resp.status_code, detail="No autorizado")
+        return resp.json()
+
+
+@app.post("/clubs/verify")
+async def proxy_club_verify(request: Request):
+    token = request.headers.get("authorization")
+    headers = {"Authorization": token} if token else {}
+    body = await request.json()
+    async with httpx.AsyncClient(headers=headers) as client:
+        resp = await client.post(f"{USERS_SERVICE_URL}/clubs/verify", json=body)
+        if resp.status_code >= 400:
+            raise HTTPException(status_code=resp.status_code, detail=resp.json().get('detail', 'Error'))
+        return resp.json()
+
+
+@app.post("/me/team")
+async def proxy_change_team(team_id: int, request: Request):
+    token = request.headers.get("authorization")
+    headers = {"Authorization": token} if token else {}
+    async with httpx.AsyncClient(headers=headers) as client:
+        resp = await client.post(f"{USERS_SERVICE_URL}/me/team", params={"team_id": team_id})
+        if resp.status_code >= 400:
+            raise HTTPException(status_code=resp.status_code, detail=resp.json().get('detail', 'Error'))
+        return resp.json()
+
+
+@app.post("/me/avatar")
+async def proxy_upload_avatar(request: Request):
+    token = request.headers.get("authorization")
+    headers = {"Authorization": token} if token else {}
+    form = await request.form()
+    file = form.get("file")
+    if not file:
+        raise HTTPException(400, "No file uploaded")
+    files = {
+        "file": (file.filename, await file.read(), file.content_type)
+    }
+    async with httpx.AsyncClient(headers=headers) as client:
+        resp = await client.post(f"{USERS_SERVICE_URL}/me/avatar", files=files)
+        if resp.status_code >= 400:
+            raise HTTPException(status_code=resp.status_code, detail="Error subiendo imagen")
+        return resp.json()
+
+
+@app.post("/admin/restart/{service_name}")
+def restart_service(service_name: str):
+    try:
+        config.load_incluster_config()
+    except:
+        try:
+            config.load_kube_config()
+        except:
+            return {"error": "No se pudo conectar a Kubernetes"}
+
+    v1 = client.AppsV1Api()
+
+    patch_body = {
+        "spec": {
+            "template": {
+                "metadata": {
+                    "annotations": {
+                        "kubectl.kubernetes.io/restartedAt": str(datetime.now())
+                    }
+                }
+            }
+        }
+    }
+
+    try:
+        v1.patch_namespaced_deployment(
+            name=service_name,
+            namespace="default",
+            body=patch_body
+        )
+        return {"status": f"Reiniciando servicio {service_name}..."}
+    except Exception as e:
+        return {"error": f"Error al reiniciar: {str(e)}"}

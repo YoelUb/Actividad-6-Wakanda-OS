@@ -1,4 +1,4 @@
-import {useState, useEffect, useRef} from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import SecretClub from './SecretClub';
 import PokemonClub from './PokemonClub';
@@ -6,12 +6,13 @@ import HogwartsClub from './HogwartsClub';
 import Login from './Login';
 import Register from './Register';
 import UserProfile from './UserProfile';
+import AdminPanel from './AdminPanel';
 import './App.css';
 
 const GATEWAY_URL = 'http://localhost:30006';
 const USERS_API = 'http://localhost:30006';
 
-function ServiceCard({title, endpoint, icon, theme = 'default'}) {
+function ServiceCard({ title, endpoint, icon, theme = 'default' }) {
     const [data, setData] = useState(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -66,7 +67,7 @@ function ServiceCard({title, endpoint, icon, theme = 'default'}) {
                 <div className="card-icon">{icon}</div>
                 <h3>{title}</h3>
                 <div className="status-indicator">
-                    <div className={`status-dot ${loading ? 'loading' : error ? 'error' : 'success'}`}/>
+                    <div className={`status-dot ${loading ? 'loading' : error ? 'error' : 'success'}`} />
                 </div>
             </div>
             <div className="card-body">
@@ -117,8 +118,8 @@ function App() {
             axios.get(`${USERS_API}/me`, {
                 headers: { Authorization: `Bearer ${token}` }
             })
-            .then(res => setCurrentUser(res.data))
-            .catch(err => console.error("Error cargando perfil", err));
+                .then(res => setCurrentUser(res.data))
+                .catch(err => console.error("Error cargando perfil", err));
         }
     }, [token, view]);
 
@@ -152,18 +153,29 @@ function App() {
         }
     };
 
+
     if (!token && view === 'register') {
-        return <Register switchToLogin={() => setView('login')}/>;
+        return <Register switchToLogin={() => setView('login')} />;
     }
 
     if (!token) {
-        return <Login onLoginSuccess={handleLoginSuccess} switchToRegister={() => setView('register')}/>;
+        return <Login onLoginSuccess={handleLoginSuccess} switchToRegister={() => setView('register')} />;
     }
 
-    if (view === 'rickmorty') return <SecretClub onExit={() => setView('dashboard')}/>;
-    if (view === 'pokemon') return <PokemonClub onExit={() => setView('dashboard')}/>;
-    if (view === 'harrypotter') return <HogwartsClub onExit={() => setView('dashboard')}/>;
-    if (view === 'profile') return <UserProfile token={token} onLogout={handleLogout} onBackToHome={() => setView('dashboard')}/>;
+    if (view === 'rickmorty') return <SecretClub onExit={() => setView('dashboard')} />;
+    if (view === 'pokemon') return <PokemonClub onExit={() => setView('dashboard')} />;
+    if (view === 'hogwarts') return <HogwartsClub onExit={() => setView('dashboard')} />;
+
+    if (view === 'profile') return <UserProfile token={token} onLogout={handleLogout} onBackToHome={() => setView('dashboard')} />;
+
+    if (view === 'admin') {
+        if (currentUser?.role !== 'ADMIN') {
+            setView('dashboard');
+            return null;
+        }
+        return <AdminPanel onExit={() => setView('dashboard')} />;
+    }
+
 
     return (
         <div className="wakanda-dashboard">
@@ -184,8 +196,23 @@ function App() {
                         <div className="stat-label">Sistemas</div>
                     </div>
 
+                    {currentUser && currentUser.role === 'ADMIN' && (
+                        <button
+                            className="vibranium-btn"
+                            style={{
+                                backgroundColor: '#ff4757',
+                                border: '1px solid white',
+                                marginRight: '10px',
+                                padding: '5px 15px'
+                            }}
+                            onClick={() => setView('admin')}
+                        >
+                            🛡️ ADMIN
+                        </button>
+                    )}
+
                     <button className="vibranium-btn secondary" onClick={() => setView('profile')}
-                            style={{width: 'auto', display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 15px'}}>
+                        style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 15px' }}>
                         {currentUser && currentUser.profile_pic_url ? (
                             <img
                                 src={currentUser.profile_pic_url}
@@ -203,7 +230,7 @@ function App() {
                                 }}
                             />
                         ) : (
-                            <span style={{fontSize: '1.2rem'}}>👤</span>
+                            <span style={{ fontSize: '1.2rem' }}>👤</span>
                         )}
                         <span>MI PERFIL</span>
                     </button>
@@ -212,11 +239,11 @@ function App() {
 
             <main className="dashboard-main">
                 <div className="services-grid">
-                    <ServiceCard title="Gestión de Tráfico" endpoint="/traffic/status" icon="🚦" theme="traffic"/>
-                    <ServiceCard title="Red Energética" endpoint="/energy/grid" icon="⚡" theme="energy"/>
-                    <ServiceCard title="Suministro de Agua" endpoint="/water/pressure" icon="💧" theme="water"/>
-                    <ServiceCard title="Gestión de Residuos" endpoint="/waste/status" icon="🗑️" theme="waste"/>
-                    <ServiceCard title="Seguridad y Drones" endpoint="/security/alerts" icon="🛡️" theme="security"/>
+                    <ServiceCard title="Gestión de Tráfico" endpoint="/traffic/status" icon="🚦" theme="traffic" />
+                    <ServiceCard title="Red Energética" endpoint="/energy/grid" icon="⚡" theme="energy" />
+                    <ServiceCard title="Suministro de Agua" endpoint="/water/pressure" icon="💧" theme="water" />
+                    <ServiceCard title="Gestión de Residuos" endpoint="/waste/status" icon="🗑️" theme="waste" />
+                    <ServiceCard title="Seguridad y Drones" endpoint="/security/alerts" icon="🛡️" theme="security" />
 
                     <div className="secret-club-card">
                         <div className="secret-header">
@@ -228,7 +255,7 @@ function App() {
                                 type="password"
                                 placeholder="Código de Acceso"
                                 className="password-input"
-                                style={{fontSize: '1rem', padding: '10px'}}
+                                style={{ fontSize: '1rem', padding: '10px' }}
                                 value={secretCode}
                                 onChange={(e) => setSecretCode(e.target.value)}
                                 onKeyDown={(e) => {
@@ -237,7 +264,7 @@ function App() {
                             />
                             <button
                                 className="vibranium-btn"
-                                style={{marginTop: '10px'}}
+                                style={{ marginTop: '10px' }}
                                 onClick={() => handleSecretAccess(secretCode)}
                             >
                                 ACCEDER

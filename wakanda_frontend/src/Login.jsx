@@ -35,9 +35,8 @@ export default function Login({ onLoginSuccess, switchToRegister }) {
         setTempToken(res.data.temp_token);
         setMethod(res.data.method);
       } else if (res.data.status === "VERIFICATION_REQUIRED") {
-        // Nuevo manejo para cuenta no verificada
         setStep(3);
-        setError(res.data.msg); // Muestra "Cuenta no verificada..."
+        setError(res.data.msg);
       } else {
         onLoginSuccess(res.data.access_token);
       }
@@ -63,7 +62,6 @@ export default function Login({ onLoginSuccess, switchToRegister }) {
     }
   };
 
-  // Nueva función para verificar cuenta (registro inicial)
   const handleAccountVerification = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -84,7 +82,6 @@ export default function Login({ onLoginSuccess, switchToRegister }) {
     }
   };
 
-  // Nueva función para reenviar código
   const handleResendCode = async () => {
     setLoading(true);
     setError('');

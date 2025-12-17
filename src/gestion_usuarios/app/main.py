@@ -118,7 +118,34 @@ def init_teams():
         db.close()
 
 
+def init_admin():
+    db = SessionLocal()
+    try:
+        admin_email = "admin@wakanda.es"
+        exists = db.query(User).filter(User.email == admin_email).first()
+        if not exists:
+            admin_user = User(
+                email=admin_email,
+                hashed_password=pwd_context.hash("admin123"),
+                name="T'Challa",
+                last_name="King",
+                role="ADMIN",
+                is_verified=True,
+                team_id=1,
+                club_password="WAKANDA-FOREVER"
+            )
+            db.add(admin_user)
+            db.commit()
+            print(f"ADMIN CREADO: {admin_email} / admin123")
+    except Exception as e:
+        print(f"Error creando admin: {e}")
+    finally:
+        db.close()
+
+
+
 init_teams()
+init_admin()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -354,7 +381,6 @@ async def upload_avatar(file: UploadFile = File(...), user: User = Depends(get_c
                         db: Session = Depends(get_db)):
     bucket_name = "avatars"
 
-    # Asegurar que el bucket existe
     try:
         s3_client.head_bucket(Bucket=bucket_name)
     except:
@@ -363,7 +389,7 @@ async def upload_avatar(file: UploadFile = File(...), user: User = Depends(get_c
         except Exception as e:
             logger.error(f"Error creando bucket: {e}")
 
-    # CONFIGURAR POLÍTICA PÚBLICA PARA QUE EL NAVEGADOR PUEDA VER LA IMAGEN
+
     try:
         policy = {
             "Version": "2012-10-17",
@@ -392,7 +418,7 @@ async def upload_avatar(file: UploadFile = File(...), user: User = Depends(get_c
     except Exception as e:
         raise HTTPException(500, f"Error al subir imagen a MinIO: {e}")
 
-    url = f"http://localhost:9000/{bucket_name}/{file_key}"
+    url = f"http://localhost:30009/{bucket_name}/{file_key}"
     user.profile_pic_url = url
     db.commit()
 
