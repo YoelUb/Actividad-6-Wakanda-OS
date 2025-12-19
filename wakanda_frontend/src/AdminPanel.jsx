@@ -67,11 +67,10 @@ export default function AdminPanel({ onExit }) {
   };
 
   const handleLogout = () => {
-    // CORRECCIÓN: Usar el mismo nombre que en App.jsx
     localStorage.removeItem('wakanda_token');
-    localStorage.clear(); // Limpia todo por seguridad
+    localStorage.clear();
     onExit();
-    window.location.reload(); // Fuerza el reset del estado de la App
+    window.location.reload();
   };
 
   return (
