@@ -45,15 +45,19 @@ export default function AdminPanel({ onExit }) {
 
   const handleRestart = async (deployName, serviceTitle) => {
     if (restarting[deployName]) return;
-    const confirmed = window.confirm(`⚠ ALERTA DE SISTEMA\n\n¿Reiniciar ${serviceTitle}?`);
+    const confirmed = window.confirm(`⚠ ALERTA OMEGA\n¿Confirmar reinicio de ${serviceTitle}?`);
     if (!confirmed) return;
 
     setRestarting(prev => ({ ...prev, [deployName]: true }));
     try {
-      const res = await axios.post(`${GATEWAY_URL}/admin/restart/${deployName}`, {}, { timeout: 15000 });
-      alert(res.data.error ? `❌ Error: ${res.data.error}` : `✅ COMANDO ENVIADO: ${res.data.status}`);
+      const res = await axios.post(`${GATEWAY_URL}/admin/restart/${deployName}`, {});
+      if (res.data.error) {
+        alert(`❌ ERROR DE CLÚSTER: ${res.data.error}`);
+      } else {
+        alert(`✅ PROTOCOLO ACTIVADO: ${res.data.status}`);
+      }
     } catch (error) {
-      alert("❌ Error crítico: Gateway no responde");
+      alert("❌ ERROR: El Gateway no responde o no tiene permisos de Kubernetes.");
     } finally {
       setTimeout(() => {
         setRestarting(prev => ({ ...prev, [deployName]: false }));
@@ -63,8 +67,11 @@ export default function AdminPanel({ onExit }) {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token'); // Limpieza real de sesión
+    // CORRECCIÓN: Usar el mismo nombre que en App.jsx
+    localStorage.removeItem('wakanda_token');
+    localStorage.clear(); // Limpia todo por seguridad
     onExit();
+    window.location.reload(); // Fuerza el reset del estado de la App
   };
 
   return (
@@ -90,23 +97,20 @@ export default function AdminPanel({ onExit }) {
             <span className="access-level">NIVEL 5</span>
           </div>
         </div>
-
         <div className="header-right">
           <div className={`system-pulse ${pulseEffect ? 'pulse-active' : ''}`}>
             <div className="pulse-dot"></div>
             <span>SISTEMA ACTIVO</span>
           </div>
           <button className="cyber-btn-exit" onClick={handleLogout}>
-            <span className="btn-text">SALIR</span>
+            <span className="btn-text">CERRAR SESIÓN</span>
           </button>
         </div>
       </header>
 
       <main className="dashboard-main">
         {loading ? (
-          <div className="cyber-loader">
-            <p className="loader-text">SINCRONIZANDO...</p>
-          </div>
+          <div className="cyber-loader"><p className="loader-text">SINCRONIZANDO VIBRANIUM...</p></div>
         ) : (
           <div className="services-grid">
             {services.map(s => {
@@ -115,7 +119,6 @@ export default function AdminPanel({ onExit }) {
               const isRestarting = restarting[s.deployName];
               return (
                 <div key={s.key} className={`service-card ${s.theme}-theme`}>
-                  <div className="card-glow"></div>
                   <div className="card-header">
                     <div className="card-icon">{s.icon}</div>
                     <h3>{s.name}</h3>
@@ -126,10 +129,7 @@ export default function AdminPanel({ onExit }) {
                   </div>
                   <div className="card-body">
                     {isError ? (
-                      <div className="error-display">
-                        <span className="error-icon">⚠</span>
-                        <p>SISTEMA CAÍDO</p>
-                      </div>
+                      <div className="error-display"><span className="error-icon">⚠</span><p>SISTEMA CAÍDO</p></div>
                     ) : (
                       <div className="data-display">
                         <div className="data-grid">
