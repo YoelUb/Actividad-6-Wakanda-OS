@@ -1,7 +1,7 @@
 import os
 import httpx
 import random
-from datetime import datetime
+from datetime import datetime, timezone
 from kubernetes import client, config
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from .resilience import fetch_from_service, post_to_service
@@ -37,6 +37,7 @@ async def root():
     return {"message": "Wakanda OS Gateway Online", "status": "OK"}
 
 
+# ... (MANTÉN TODOS TUS ENDPOINTS DE SERVICIOS NORMALES IGUAL QUE ANTES) ...
 @app.get("/traffic/status")
 async def proxy_traffic():
     async with httpx.AsyncClient() as client:
@@ -128,14 +129,15 @@ async def get_hp_detail(id: str):
         raise HTTPException(404, "Muggle no encontrado")
 
 
+# ... (MANTÉN TUS PROXIES DE USUARIOS IGUALES) ...
 @app.post("/register")
 async def proxy_register(request: Request):
     form_data = await request.form()
     data = dict(form_data)
     async with httpx.AsyncClient() as client:
         resp = await post_to_service(f"{USERS_SERVICE_URL}/register", data=data, client=client)
-        if resp.status_code >= 400:
-            raise HTTPException(status_code=resp.status_code, detail=resp.json().get('detail', 'Error'))
+        if resp.status_code >= 400: raise HTTPException(status_code=resp.status_code,
+                                                        detail=resp.json().get('detail', 'Error'))
         return resp.json()
 
 
@@ -145,8 +147,8 @@ async def proxy_login(request: Request):
     data = dict(form_data)
     async with httpx.AsyncClient() as client:
         resp = await post_to_service(f"{USERS_SERVICE_URL}/login", data=data, client=client)
-        if resp.status_code >= 400:
-            raise HTTPException(status_code=resp.status_code, detail=resp.json().get('detail', 'Error'))
+        if resp.status_code >= 400: raise HTTPException(status_code=resp.status_code,
+                                                        detail=resp.json().get('detail', 'Error'))
         return resp.json()
 
 
@@ -156,8 +158,8 @@ async def proxy_verify_2fa(code: str, temp_token: str):
         url = f"{USERS_SERVICE_URL}/verify-2fa"
         params = {"code": code, "temp_token": temp_token}
         resp = await post_to_service(url, params=params, client=client)
-        if resp.status_code >= 400:
-            raise HTTPException(status_code=resp.status_code, detail=resp.json().get('detail', 'Error'))
+        if resp.status_code >= 400: raise HTTPException(status_code=resp.status_code,
+                                                        detail=resp.json().get('detail', 'Error'))
         return resp.json()
 
 
@@ -167,8 +169,8 @@ async def proxy_verify_account(request: Request):
     data = dict(form_data)
     async with httpx.AsyncClient() as client:
         resp = await post_to_service(f"{USERS_SERVICE_URL}/verify-account", data=data, client=client)
-        if resp.status_code >= 400:
-            raise HTTPException(status_code=resp.status_code, detail=resp.json().get('detail', 'Error'))
+        if resp.status_code >= 400: raise HTTPException(status_code=resp.status_code,
+                                                        detail=resp.json().get('detail', 'Error'))
         return resp.json()
 
 
@@ -178,8 +180,8 @@ async def proxy_resend_code(request: Request):
     data = dict(form_data)
     async with httpx.AsyncClient() as client:
         resp = await post_to_service(f"{USERS_SERVICE_URL}/resend-code", data=data, client=client)
-        if resp.status_code >= 400:
-            raise HTTPException(status_code=resp.status_code, detail=resp.json().get('detail', 'Error'))
+        if resp.status_code >= 400: raise HTTPException(status_code=resp.status_code,
+                                                        detail=resp.json().get('detail', 'Error'))
         return resp.json()
 
 
@@ -189,8 +191,7 @@ async def proxy_users_me(request: Request):
     headers = {"Authorization": token} if token else {}
     async with httpx.AsyncClient(headers=headers) as client:
         resp = await client.get(f"{USERS_SERVICE_URL}/me")
-        if resp.status_code >= 400:
-            raise HTTPException(status_code=resp.status_code, detail="No autorizado")
+        if resp.status_code >= 400: raise HTTPException(status_code=resp.status_code, detail="No autorizado")
         return resp.json()
 
 
@@ -201,8 +202,8 @@ async def proxy_club_verify(request: Request):
     body = await request.json()
     async with httpx.AsyncClient(headers=headers) as client:
         resp = await client.post(f"{USERS_SERVICE_URL}/clubs/verify", json=body)
-        if resp.status_code >= 400:
-            raise HTTPException(status_code=resp.status_code, detail=resp.json().get('detail', 'Error'))
+        if resp.status_code >= 400: raise HTTPException(status_code=resp.status_code,
+                                                        detail=resp.json().get('detail', 'Error'))
         return resp.json()
 
 
@@ -212,8 +213,8 @@ async def proxy_change_team(team_id: int, request: Request):
     headers = {"Authorization": token} if token else {}
     async with httpx.AsyncClient(headers=headers) as client:
         resp = await client.post(f"{USERS_SERVICE_URL}/me/team", params={"team_id": team_id})
-        if resp.status_code >= 400:
-            raise HTTPException(status_code=resp.status_code, detail=resp.json().get('detail', 'Error'))
+        if resp.status_code >= 400: raise HTTPException(status_code=resp.status_code,
+                                                        detail=resp.json().get('detail', 'Error'))
         return resp.json()
 
 
@@ -223,17 +224,15 @@ async def proxy_upload_avatar(request: Request):
     headers = {"Authorization": token} if token else {}
     form = await request.form()
     file = form.get("file")
-    if not file:
-        raise HTTPException(400, "No file uploaded")
-    files = {
-        "file": (file.filename, await file.read(), file.content_type)
-    }
+    if not file: raise HTTPException(400, "No file uploaded")
+    files = {"file": (file.filename, await file.read(), file.content_type)}
     async with httpx.AsyncClient(headers=headers) as client:
         resp = await client.post(f"{USERS_SERVICE_URL}/me/avatar", files=files)
-        if resp.status_code >= 400:
-            raise HTTPException(status_code=resp.status_code, detail="Error subiendo imagen")
+        if resp.status_code >= 400: raise HTTPException(status_code=resp.status_code, detail="Error subiendo imagen")
         return resp.json()
 
+
+# =============== ZONA ADMIN & K8S (CORREGIDA) ===============
 
 @app.post("/admin/restart/{service_name}")
 def restart_service(service_name: str):
@@ -272,11 +271,18 @@ def get_k8s_info():
         v1 = client.CoreV1Api()
         pods = v1.list_namespaced_pod("default")
         pod_list = []
+
         for p in pods.items:
             start_time = p.status.start_time
             age = "Recién nacido"
+
             if start_time:
-                delta = datetime.now(start_time.tzinfo) - start_time
+                now = datetime.now(timezone.utc)
+                if start_time.tzinfo:
+                    delta = now - start_time
+                else:
+                    delta = datetime.now() - start_time
+
                 age = f"{delta.days}d {delta.seconds // 3600}h"
 
             pod_list.append({

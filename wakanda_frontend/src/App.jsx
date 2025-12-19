@@ -112,13 +112,17 @@ function App() {
         }
     }, [token]);
 
-    // Cargar datos del usuario al entrar al dashboard
     useEffect(() => {
         if (token && view === 'dashboard') {
             axios.get(`${USERS_API}/me`, {
                 headers: { Authorization: `Bearer ${token}` }
             })
-                .then(res => setCurrentUser(res.data))
+                .then(res => {
+                    setCurrentUser(res.data);
+                    if (res.data.role === 'ADMIN') {
+                        setView('admin');
+                    }
+                })
                 .catch(err => console.error("Error cargando perfil", err));
         }
     }, [token, view]);
@@ -170,8 +174,10 @@ function App() {
 
     if (view === 'admin') {
         if (currentUser?.role !== 'ADMIN') {
-            setView('dashboard');
-            return null;
+             if (currentUser && currentUser.role !== 'ADMIN') {
+                 setView('dashboard');
+                 return null;
+             }
         }
         return <AdminPanel onExit={() => setView('dashboard')} />;
     }
