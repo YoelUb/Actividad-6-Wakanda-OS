@@ -1,30 +1,33 @@
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+apiVersion: v1
+kind: ServiceAccount
 metadata:
+  name: gateway-sa
   namespace: default
-  name: gateway-restart-role
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gateway-cluster-role
 rules:
-  # Permisos existentes para reiniciar Deployments
   - apiGroups: ["apps"]
     resources: ["deployments"]
     verbs: ["get", "patch", "list", "watch"]
 
-  # PERMISOS: Necesarios para ver Pods y Nodos en el Admin Panel
-  - apiGroups: [""] # "" indica el grupo Core
+  - apiGroups: [""]
     resources: ["pods", "nodes"]
     verbs: ["get", "list", "watch"]
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
-  name: gateway-restart-binding
-  namespace: default
+  name: gateway-cluster-binding
 subjects:
   - kind: ServiceAccount
-    name: default
+    name: gateway-sa
     namespace: default
 roleRef:
-  kind: Role
-  name: gateway-restart-role
+  kind: ClusterRole
+  name: gateway-cluster-role
   apiGroup: rbac.authorization.k8s.io

@@ -11,6 +11,7 @@ export default function AdminPanel({ onExit }) {
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [restarting, setRestarting] = useState({});
+  const [k8sError, setK8sError] = useState(null);
 
   const services = [
     { key: 'traffic', url: '/traffic/status', name: 'TRÁFICO AÉREO', icon: '🛸', theme: 'traffic', deployName: 'ms-trafico' },
@@ -41,7 +42,12 @@ export default function AdminPanel({ onExit }) {
 
       if (activeTab === 'k8s') {
         const k8sRes = await axios.get(`${GATEWAY_URL}/admin/k8s/info`);
-        setK8sData(k8sRes.data);
+        if (k8sRes.data.error) {
+            setK8sError(k8sRes.data.error);
+        } else {
+            setK8sError(null);
+            setK8sData(k8sRes.data);
+        }
       } else if (activeTab === 'metrics') {
         const metricsRes = await axios.get(`${GATEWAY_URL}/admin/system/metrics`);
         setMetrics(metricsRes.data);
@@ -67,7 +73,7 @@ export default function AdminPanel({ onExit }) {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('wakanda_token');
+    sessionStorage.removeItem('wakanda_token');
     onExit();
     window.location.reload();
   };
@@ -176,9 +182,18 @@ export default function AdminPanel({ onExit }) {
 
             {activeTab === 'k8s' && (
               <div className="k8s-panel">
+                {k8sError && (
+                    <div className="error-banner" style={{background: 'rgba(255, 0, 0, 0.2)', padding: '10px', border: '1px solid red', color: '#ff4d4d', marginBottom: '20px'}}>
+                        ⚠️ <strong>ERROR DE PERMISOS:</strong> {k8sError}
+                        <br/>
+                        <small>Actualiza 'gateway-rbac.yaml' usando ClusterRole.</small>
+                    </div>
+                )}
+
                 <div className="panel-section">
                   <h3 className="section-title">INFRAESTRUCTURA DE NODOS</h3>
                   <div className="nodes-grid">
+                    {k8sData.nodes?.length === 0 && !k8sError && <p>No se encontraron nodos.</p>}
                     {k8sData.nodes?.map((n, i) => (
                       <div key={i} className="node-card">
                         <span>🖥️ {n.name}</span>

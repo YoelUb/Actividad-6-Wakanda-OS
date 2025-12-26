@@ -1,11 +1,19 @@
 import os
 import httpx
 import random
+import logging
 from datetime import datetime, timezone
 from kubernetes import client, config
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from .resilience import fetch_from_service, post_to_service
 from fastapi.middleware.cors import CORSMiddleware
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler()]
+)
+logger = logging.getLogger("WakandaGateway")
 
 app = FastAPI(title="Wakanda API Gateway")
 
@@ -230,7 +238,6 @@ async def proxy_upload_avatar(request: Request):
         return resp.json()
 
 
-
 @app.post("/admin/restart/{service_name}")
 def restart_service(service_name: str):
     try:
@@ -238,6 +245,8 @@ def restart_service(service_name: str):
             config.load_incluster_config()
         except:
             config.load_kube_config()
+
+        logger.info(f"🚀 Solicitando reinicio de {service_name}")
 
         v1 = client.AppsV1Api()
         patch_body = {
@@ -254,6 +263,7 @@ def restart_service(service_name: str):
         v1.patch_namespaced_deployment(name=service_name, namespace="default", body=patch_body)
         return {"status": f"Reiniciando servicio {service_name}...", "timestamp": str(datetime.now())}
     except Exception as e:
+        logger.error(f"⛔ FALLO AL REINICIAR {service_name}: {str(e)}")
         return {"error": f"Error al reiniciar: {str(e)}"}
 
 
@@ -269,6 +279,20 @@ def get_k8s_info():
         pods = v1.list_namespaced_pod("default")
         pod_list = []
 
+        friendly_names = {
+            "ms-trafico": "Tráfico aéreo",
+            "ms-energia": "Red vibranium",
+            "ms-agua": "Hidroeléctrica",
+            "ms-residuos": "Gestión basura",
+            "ms-seguridad": "Gestión defensa",
+            "ms-usuarios": "Gestión ciudadanos",
+            "ms-gateway": "Proxy",
+            "wakanda-frontend": "Panel de control",
+            "postgres-db": "Base de datos central",
+            "minio": "Base de datos minio",
+            "prometheus": "Sistema monitoreo"
+        }
+
         for p in pods.items:
             start_time = p.status.start_time
             age = "Recién nacido"
@@ -280,10 +304,34 @@ def get_k8s_info():
                 else:
                     delta = datetime.now() - start_time
 
-                age = f"{delta.days}d {delta.seconds // 3600}h"
+                total_seconds = int(delta.total_seconds())
+                hours = total_seconds // 3600
+                minutes = (total_seconds % 3600) // 60
+                age = f"{hours}h {minutes}m"
+
+            raw_name = p.metadata.name
+            clean_name = raw_name
+
+            parts = raw_name.split('-')
+
+            if len(parts) >= 3:
+                potential_name = "-".join(parts[:-2])
+                if potential_name in friendly_names:
+                    clean_name = friendly_names[potential_name]
+                else:
+                    clean_name = potential_name
+
+            elif len(parts) == 2 and parts[0] == "minio":
+                clean_name = friendly_names.get("minio", "Minio")
+
+            else:
+                for key, val in friendly_names.items():
+                    if raw_name.startswith(key):
+                        clean_name = val
+                        break
 
             pod_list.append({
-                "name": p.metadata.name,
+                "name": clean_name,
                 "status": p.status.phase,
                 "restarts": sum(
                     c.restart_count for c in p.status.container_statuses) if p.status.container_statuses else 0,
@@ -294,12 +342,21 @@ def get_k8s_info():
         nodes = v1.list_node()
         node_metrics = []
         for n in nodes.items:
+            raw_node_name = n.metadata.name
+            display_name = raw_node_name
+
+            if "docker-desktop" in raw_node_name.lower():
+                display_name = "CLUSTER-WAKANDA"
+            elif "minikube" in raw_node_name.lower():
+                display_name = "CLUSTER-MINI-WAKANDA"
+
             cpu = n.status.allocatable.get("cpu")
             memory = n.status.allocatable.get("memory")
-            node_metrics.append({"name": n.metadata.name, "cpu": cpu, "memory": memory})
+            node_metrics.append({"name": display_name, "cpu": cpu, "memory": memory})
 
         return {"pods": pod_list, "nodes": node_metrics}
     except Exception as e:
+        logger.error(f"🔥 ERROR CRÍTICO EN KUBERNETES: {str(e)}")
         return {"pods": [], "nodes": [], "error": str(e)}
 
 
