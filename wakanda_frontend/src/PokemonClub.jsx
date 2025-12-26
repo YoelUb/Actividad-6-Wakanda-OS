@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import "./PokemonClub.css"
 
-const API_URL = "http://localhost:30006";
+const API_URL = "http://localhost:30007";
 const MAX_POKEMON = 1025
 
 function PokeCard({ char }) {

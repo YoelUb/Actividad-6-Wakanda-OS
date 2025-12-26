@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import './AdminPanel.css';
 
-const GATEWAY_URL = 'http://localhost:30006';
+const GATEWAY_URL = 'http://localhost:30007';
 
 export default function AdminPanel({ onExit }) {
   const [activeTab, setActiveTab] = useState('services');
