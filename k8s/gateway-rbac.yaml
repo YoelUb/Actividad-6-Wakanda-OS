@@ -4,9 +4,16 @@ metadata:
   namespace: default
   name: gateway-restart-role
 rules:
-- apiGroups: ["apps"]
-  resources: ["deployments"]
-  verbs: ["get", "patch", "list", "watch"]
+  # Permisos existentes para reiniciar Deployments
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "patch", "list", "watch"]
+
+  # PERMISOS: Necesarios para ver Pods y Nodos en el Admin Panel
+  - apiGroups: [""] # "" indica el grupo Core
+    resources: ["pods", "nodes"]
+    verbs: ["get", "list", "watch"]
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -14,9 +21,9 @@ metadata:
   name: gateway-restart-binding
   namespace: default
 subjects:
-- kind: ServiceAccount
-  name: default
-  namespace: default
+  - kind: ServiceAccount
+    name: default
+    namespace: default
 roleRef:
   kind: Role
   name: gateway-restart-role

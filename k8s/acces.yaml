@@ -43,7 +43,7 @@ spec:
   ports:
     - port: 8000
       targetPort: 8000
-      nodePort: 30006
+      nodePort: 30007
   type: NodePort
 
 # --- FRONTEND ---

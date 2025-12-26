@@ -37,7 +37,6 @@ async def root():
     return {"message": "Wakanda OS Gateway Online", "status": "OK"}
 
 
-# ... (MANTÉN TODOS TUS ENDPOINTS DE SERVICIOS NORMALES IGUAL QUE ANTES) ...
 @app.get("/traffic/status")
 async def proxy_traffic():
     async with httpx.AsyncClient() as client:
@@ -129,7 +128,6 @@ async def get_hp_detail(id: str):
         raise HTTPException(404, "Muggle no encontrado")
 
 
-# ... (MANTÉN TUS PROXIES DE USUARIOS IGUALES) ...
 @app.post("/register")
 async def proxy_register(request: Request):
     form_data = await request.form()
@@ -232,7 +230,6 @@ async def proxy_upload_avatar(request: Request):
         return resp.json()
 
 
-# =============== ZONA ADMIN & K8S (CORREGIDA) ===============
 
 @app.post("/admin/restart/{service_name}")
 def restart_service(service_name: str):
