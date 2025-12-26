@@ -99,10 +99,17 @@ function ServiceCard({ title, endpoint, icon, theme = 'default' }) {
 
 function App() {
     const [view, setView] = useState('login');
-    const [token, setToken] = useState(localStorage.getItem('wakanda_token'));
+    const [token, setToken] = useState(sessionStorage.getItem('wakanda_token'));
     const [activeServices] = useState(6);
     const [secretCode, setSecretCode] = useState('');
     const [currentUser, setCurrentUser] = useState(null);
+
+    const handleLogout = () => {
+        sessionStorage.removeItem('wakanda_token');
+        setToken(null);
+        setView('login');
+        setCurrentUser(null);
+    };
 
     useEffect(() => {
         if (token) {
@@ -123,21 +130,16 @@ function App() {
                         setView('admin');
                     }
                 })
-                .catch(err => console.error("Error cargando perfil", err));
+                .catch(() => {
+                    handleLogout();
+                });
         }
     }, [token, view]);
 
     const handleLoginSuccess = (accessToken) => {
-        localStorage.setItem('wakanda_token', accessToken);
+        sessionStorage.setItem('wakanda_token', accessToken);
         setToken(accessToken);
         setView('dashboard');
-    };
-
-    const handleLogout = () => {
-        localStorage.removeItem('wakanda_token');
-        setToken(null);
-        setView('login');
-        setCurrentUser(null);
     };
 
     const handleSecretAccess = async (password) => {
@@ -156,7 +158,6 @@ function App() {
             alert(err.response?.data?.detail || '⛔ ACCESO DENEGADO: Contraseña incorrecta');
         }
     };
-
 
     if (!token && view === 'register') {
         return <Register switchToLogin={() => setView('login')} />;
@@ -181,7 +182,6 @@ function App() {
         }
         return <AdminPanel onExit={() => setView('dashboard')} />;
     }
-
 
     return (
         <div className="wakanda-dashboard">
