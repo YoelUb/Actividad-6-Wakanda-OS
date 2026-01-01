@@ -200,6 +200,18 @@ async def proxy_users_me(request: Request):
         if resp.status_code >= 400: raise HTTPException(status_code=resp.status_code, detail="No autorizado")
         return resp.json()
 
+
+@app.get("/users")
+async def proxy_get_all_users(request: Request):
+    token = request.headers.get("authorization")
+    headers = {"Authorization": token} if token else {}
+    async with httpx.AsyncClient(headers=headers) as client:
+        resp = await client.get(f"{USERS_SERVICE_URL}/users")
+        if resp.status_code >= 400:
+            raise HTTPException(status_code=resp.status_code, detail=resp.json().get('detail', 'Error'))
+        return resp.json()
+
+
 @app.put("/users/{user_id}")
 async def proxy_update_user(user_id: int, request: Request):
     token = request.headers.get("authorization")
@@ -211,11 +223,22 @@ async def proxy_update_user(user_id: int, request: Request):
             raise HTTPException(status_code=resp.status_code, detail=resp.json().get('detail', 'Error'))
         return resp.json()
 
-@app.post("/recover")
-async def proxy_recover_password(request: Request):
+
+@app.post("/recover/request")
+async def proxy_recover_request(request: Request):
     body = await request.json()
     async with httpx.AsyncClient() as client:
-        resp = await client.post(f"{USERS_SERVICE_URL}/recover", json=body)
+        resp = await client.post(f"{USERS_SERVICE_URL}/recover/request", json=body)
+        if resp.status_code >= 400:
+            raise HTTPException(status_code=resp.status_code, detail=resp.json().get('detail', 'Error'))
+        return resp.json()
+
+
+@app.post("/recover/confirm")
+async def proxy_recover_confirm(request: Request):
+    body = await request.json()
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(f"{USERS_SERVICE_URL}/recover/confirm", json=body)
         if resp.status_code >= 400:
             raise HTTPException(status_code=resp.status_code, detail=resp.json().get('detail', 'Error'))
         return resp.json()

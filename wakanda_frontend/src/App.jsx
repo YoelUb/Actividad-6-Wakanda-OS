@@ -126,9 +126,6 @@ function App() {
             })
                 .then(res => {
                     setCurrentUser(res.data);
-                    if (res.data.role === 'ADMIN') {
-                        setView('admin');
-                    }
                 })
                 .catch(() => {
                     handleLogout();
@@ -136,8 +133,8 @@ function App() {
         }
     }, [token, view]);
 
-    const handleLoginSuccess = (accessToken) => {
-        sessionStorage.setItem('wakanda_token', accessToken);
+    const handleLoginSuccess = () => {
+        const accessToken = sessionStorage.getItem('wakanda_token');
         setToken(accessToken);
         setView('dashboard');
     };
@@ -164,7 +161,12 @@ function App() {
     }
 
     if (!token) {
-        return <Login onLoginSuccess={handleLoginSuccess} switchToRegister={() => setView('register')} />;
+        return (
+            <Login
+                onLogin={handleLoginSuccess}
+                onNavigateToRegister={() => setView('register')}
+            />
+        );
     }
 
     if (view === 'rickmorty') return <SecretClub onExit={() => setView('dashboard')} />;

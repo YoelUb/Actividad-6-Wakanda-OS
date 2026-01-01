@@ -103,8 +103,13 @@ class UserUpdate(BaseModel):
     password: Optional[str] = None
 
 
-class RecoverPassword(BaseModel):
-    secret_key: str
+class RecoverRequest(BaseModel):
+    email: str
+
+
+class RecoverConfirm(BaseModel):
+    email: str
+    code: str
     new_password: str
 
 
@@ -228,6 +233,26 @@ def send_verification_email(to_email: str, code: str):
     </html>
     """
     send_email(to_email, "Codigo de Verificacion - Wakanda OS", body)
+
+
+def send_password_recovery_email(to_email: str, code: str):
+    body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="UTF-8"></head>
+    <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+            <h2 style="color: #ff4757; text-align: center;">🔑 Recuperación de Contraseña</h2>
+            <p style="text-align: center; color: #555;">Usa este código para restablecer tu contraseña:</p>
+            <div style="background: #fff0f1; padding: 15px; text-align: center; font-size: 32px; letter-spacing: 5px; font-weight: bold; color: #ff4757; border-radius: 5px; margin: 20px 0; border: 1px dashed #ff4757;">
+                {code}
+            </div>
+            <p style="text-align: center; color: #888; font-size: 12px;">Si no has solicitado esto, ignora este correo.</p>
+        </div>
+    </body>
+    </html>
+    """
+    send_email(to_email, "Recuperacion de Acceso - Wakanda OS", body)
 
 
 def send_account_verified_email(to_email: str, club_password: str):
@@ -458,6 +483,13 @@ def read_users_me(user: User = Depends(get_current_user)):
     return user
 
 
+@app.get("/users")
+def get_all_users(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if user.role != "ADMIN":
+        raise HTTPException(status_code=403, detail="Requiere privilegios de administrador")
+    return db.query(User).all()
+
+
 @app.put("/users/{user_id}")
 def update_user(user_id: int, user_data: UserUpdate, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
@@ -474,12 +506,36 @@ def update_user(user_id: int, user_data: UserUpdate, db: Session = Depends(get_d
     return {"message": "Usuario actualizado correctamente"}
 
 
-@app.post("/recover")
-def recover_password(data: RecoverPassword, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.club_password == data.secret_key).first()
+@app.post("/recover/request")
+def request_password_recovery(data: RecoverRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == data.email).first()
     if not user:
-        raise HTTPException(status_code=404, detail="Llave secreta inválida")
+        return {"message": "Si el correo existe, se enviará un código."}
+
+    recovery_code = str(random.randint(100000, 999999))
+    user.email_verification_code = recovery_code
+    user.email_code_expires_at = datetime.utcnow() + timedelta(minutes=15)
+    db.commit()
+
+    send_password_recovery_email(data.email, recovery_code)
+    return {"message": "Código de recuperación enviado."}
+
+
+@app.post("/recover/confirm")
+def confirm_password_recovery(data: RecoverConfirm, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == data.email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    if user.email_verification_code != data.code:
+        raise HTTPException(status_code=400, detail="Código incorrecto")
+
+    if user.email_code_expires_at and datetime.utcnow() > user.email_code_expires_at:
+        raise HTTPException(status_code=400, detail="El código ha expirado")
 
     user.hashed_password = pwd_context.hash(data.new_password)
+    user.email_verification_code = None
+    user.email_code_expires_at = None
     db.commit()
+
     return {"message": "Contraseña restablecida con éxito"}
