@@ -9,9 +9,13 @@ export default function AdminPanel({ onExit }) {
   const [stats, setStats] = useState({});
   const [k8sData, setK8sData] = useState({ pods: [], nodes: [] });
   const [metrics, setMetrics] = useState(null);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [restarting, setRestarting] = useState({});
   const [k8sError, setK8sError] = useState(null);
+
+  const [editingUser, setEditingUser] = useState(null);
+  const [editForm, setEditForm] = useState({ username: '', password: '' });
 
   const services = [
     { key: 'traffic', url: '/traffic/status', name: 'TRÁFICO AÉREO', icon: '🛸', theme: 'traffic', deployName: 'ms-trafico' },
@@ -23,24 +27,24 @@ export default function AdminPanel({ onExit }) {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 3000);
+    const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
   }, [activeTab]);
 
   const fetchData = async () => {
     try {
-      const servicePromises = services.map(s =>
-        axios.get(`${GATEWAY_URL}${s.url}`)
-          .then(r => ({ key: s.key, data: r.data }))
-          .catch(() => ({ key: s.key, error: true }))
-      );
-
-      const results = await Promise.all(servicePromises);
-      const newStats = {};
-      results.forEach(r => newStats[r.key] = r.data || { status: 'OFFLINE', lastUpdate: new Date().toLocaleTimeString() });
-      setStats(newStats);
-
-      if (activeTab === 'k8s') {
+      if (activeTab === 'services') {
+        const servicePromises = services.map(s =>
+          axios.get(`${GATEWAY_URL}${s.url}`)
+            .then(r => ({ key: s.key, data: r.data }))
+            .catch(() => ({ key: s.key, error: true }))
+        );
+        const results = await Promise.all(servicePromises);
+        const newStats = {};
+        results.forEach(r => newStats[r.key] = r.data || { status: 'OFFLINE', lastUpdate: new Date().toLocaleTimeString() });
+        setStats(newStats);
+      }
+      else if (activeTab === 'k8s') {
         const k8sRes = await axios.get(`${GATEWAY_URL}/admin/k8s/info`);
         if (k8sRes.data.error) {
             setK8sError(k8sRes.data.error);
@@ -48,9 +52,20 @@ export default function AdminPanel({ onExit }) {
             setK8sError(null);
             setK8sData(k8sRes.data);
         }
-      } else if (activeTab === 'metrics') {
+      }
+      else if (activeTab === 'metrics') {
         const metricsRes = await axios.get(`${GATEWAY_URL}/admin/system/metrics`);
         setMetrics(metricsRes.data);
+      }
+      else if (activeTab === 'users') {
+        try {
+            const usersRes = await axios.get(`${GATEWAY_URL}/users`, {
+                headers: { Authorization: sessionStorage.getItem('wakanda_token') }
+            });
+            setUsers(usersRes.data);
+        } catch (err) {
+            console.warn("No se pudo obtener la lista de usuarios");
+        }
       }
 
       setLoading(false);
@@ -69,6 +84,22 @@ export default function AdminPanel({ onExit }) {
       alert("❌ Error: Gateway sin permisos RBAC");
     } finally {
       setTimeout(() => setRestarting(p => ({ ...p, [deployName]: false })), 5000);
+    }
+  };
+
+  const handleUpdateUser = async (e) => {
+    e.preventDefault();
+    try {
+      const token = sessionStorage.getItem('wakanda_token');
+      await axios.put(`${GATEWAY_URL}/users/${editingUser.id}`, editForm, {
+        headers: { Authorization: token }
+      });
+      alert("✅ Credenciales actualizadas correctamente");
+      setEditingUser(null);
+      fetchData();
+    } catch (error) {
+      alert("❌ Error al actualizar usuario");
+      console.error(error);
     }
   };
 
@@ -111,6 +142,9 @@ export default function AdminPanel({ onExit }) {
           </button>
           <button className={`tab-btn ${activeTab === 'metrics' ? 'active' : ''}`} onClick={() => setActiveTab('metrics')}>
             📊 RENDIMIENTO
+          </button>
+          <button className={`tab-btn ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}>
+            👥 CIUDADANOS
           </button>
         </div>
 
@@ -205,32 +239,34 @@ export default function AdminPanel({ onExit }) {
 
                 <div className="panel-section">
                   <h3 className="section-title">ESTADO DE PODS (VIBRANIUM CLUSTER)</h3>
-                  <table className="cyber-table">
-                    <thead>
-                      <tr>
-                        <th>POD NAME</th>
-                        <th>STATUS</th>
-                        <th>RESTARTS</th>
-                        <th>AGE</th>
-                        <th>IP</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {k8sData.pods?.map((pod, i) => (
-                        <tr key={i} className={pod.status === 'Running' ? '' : 'row-error'}>
-                          <td>{pod.name}</td>
-                          <td>
-                            <span className={`status-pill ${pod.status}`}>
-                              {pod.status}
-                            </span>
-                          </td>
-                          <td>{pod.restarts > 0 ? `⚠️ ${pod.restarts}` : '0'}</td>
-                          <td>{pod.age}</td>
-                          <td>{pod.ip}</td>
+                  <div className="table-responsive-wrapper">
+                    <table className="cyber-table">
+                      <thead>
+                        <tr>
+                          <th>POD NAME</th>
+                          <th>STATUS</th>
+                          <th>RESTARTS</th>
+                          <th>AGE</th>
+                          <th>IP</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {k8sData.pods?.map((pod, i) => (
+                          <tr key={i} className={pod.status === 'Running' ? '' : 'row-error'}>
+                            <td>{pod.name}</td>
+                            <td>
+                              <span className={`status-pill ${pod.status}`}>
+                                {pod.status}
+                              </span>
+                            </td>
+                            <td>{pod.restarts > 0 ? `⚠️ ${pod.restarts}` : '0'}</td>
+                            <td>{pod.age}</td>
+                            <td>{pod.ip}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
@@ -270,9 +306,116 @@ export default function AdminPanel({ onExit }) {
                 </div>
               </div>
             )}
+
+            {activeTab === 'users' && (
+              <div className="k8s-panel">
+                <div className="panel-section">
+                  <h3 className="section-title">BASE DE DATOS DE CIUDADANOS</h3>
+                  <div className="table-responsive-wrapper">
+                    <table className="cyber-table">
+                      <thead>
+                        <tr>
+                          <th>ID</th>
+                          <th>USUARIO (EMAIL)</th>
+                          <th>ROL</th>
+                          <th>ESTADO</th>
+                          <th>ACCIONES</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {users.map((u) => (
+                          <tr key={u.id}>
+                            <td>#{u.id}</td>
+                            <td>{u.email}</td>
+                            <td>{u.role}</td>
+                            <td>
+                                {u.is_verified ?
+                                    <span style={{color: 'var(--neon-green)'}}>Verificado</span> :
+                                    <span style={{color: 'var(--neon-yellow)'}}>Pendiente</span>
+                                }
+                            </td>
+                            <td>
+                              <button
+                                className="cyber-btn-exit"
+                                style={{padding: '5px 10px', fontSize: '0.8rem'}}
+                                onClick={() => {
+                                  setEditingUser(u);
+                                  setEditForm({ username: u.email, password: '' });
+                                }}
+                              >
+                                ✏️ EDITAR
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                        {users.length === 0 && (
+                            <tr><td colSpan="5" style={{textAlign: 'center', padding: '20px'}}>No se encontraron usuarios o sin conexión.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
       </main>
+
+      {editingUser && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          background: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center',
+          alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(5px)'
+        }}>
+          <div className="k8s-panel" style={{maxWidth: '400px', width: '90%', border: '2px solid var(--neon-blue)', boxShadow: '0 0 30px rgba(0, 234, 255, 0.3)'}}>
+            <h3 className="section-title" style={{textAlign: 'center'}}>Restablecer Credenciales</h3>
+            <p style={{color: '#aaa', marginBottom: '20px', textAlign: 'center'}}>
+                Usuario ID: <span style={{color: 'white'}}>{editingUser.id}</span>
+            </p>
+
+            <form onSubmit={handleUpdateUser}>
+              <div style={{marginBottom: '15px'}}>
+                <label style={{color: 'var(--neon-blue)', display: 'block', marginBottom: '8px', fontSize: '0.9rem'}}>EMAIL / USUARIO:</label>
+                <input
+                  type="text"
+                  value={editForm.username}
+                  onChange={(e) => setEditForm({...editForm, username: e.target.value})}
+                  style={{
+                    width: '100%', padding: '12px', background: 'rgba(0,0,0,0.3)',
+                    border: '1px solid var(--neon-blue)', color: 'white', borderRadius: '6px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+              <div style={{marginBottom: '25px'}}>
+                <label style={{color: 'var(--neon-blue)', display: 'block', marginBottom: '8px', fontSize: '0.9rem'}}>NUEVA CONTRASEÑA:</label>
+                <input
+                  type="text"
+                  placeholder="Dejar vacío para no cambiar"
+                  value={editForm.password}
+                  onChange={(e) => setEditForm({...editForm, password: e.target.value})}
+                  style={{
+                    width: '100%', padding: '12px', background: 'rgba(0,0,0,0.3)',
+                    border: '1px solid var(--neon-blue)', color: 'white', borderRadius: '6px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+              <div style={{display: 'flex', gap: '15px'}}>
+                <button type="submit" className="tab-btn active" style={{flex: 1}}>GUARDAR</button>
+                <button
+                    type="button"
+                    className="tab-btn"
+                    style={{flex: 1, borderColor: 'var(--neon-red)', color: 'var(--neon-red)'}}
+                    onClick={() => setEditingUser(null)}
+                >
+                    CANCELAR
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

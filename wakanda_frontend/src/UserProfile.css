@@ -3,6 +3,7 @@
   margin: 40px auto;
   perspective: 1000px;
   animation: profileFadeIn 0.5s ease-out;
+  width: 95%;
 }
 
 .profile-card {
@@ -134,6 +135,8 @@
   backdrop-filter: blur(10px);
   position: relative;
   overflow: hidden;
+  flex-wrap: wrap;
+  gap: 20px;
 }
 
 .profile-header::before {
@@ -253,9 +256,14 @@
   animation: profileSpin 1s linear infinite;
 }
 
+.profile-info {
+  flex: 1;
+  min-width: 250px;
+}
+
 .profile-info h2 {
   margin: 0 0 8px 0;
-  font-size: 2.5rem;
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
   background: linear-gradient(90deg, #fff, var(--neon-blue));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -270,6 +278,7 @@
   font-size: 1.1rem;
   margin-bottom: 15px;
   letter-spacing: 0.5px;
+  word-break: break-all;
 }
 
 .profile-role {
@@ -369,7 +378,7 @@
 
 .info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   gap: 25px;
   background: rgba(0, 0, 0, 0.3);
   padding: 35px;
@@ -413,6 +422,7 @@
   color: #fff;
   font-weight: 700;
   font-family: 'Segoe UI', sans-serif;
+  word-break: break-word;
 }
 
 .info-value.status-active {
@@ -466,6 +476,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
 }
 
 .action-buttons {
@@ -476,7 +488,7 @@
 
 .clubs-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   gap: 25px;
   width: 100%;
 }
@@ -704,8 +716,7 @@
 
 @media (max-width: 768px) {
   .profile-wrapper {
-    margin: 20px 15px;
-    padding: 0;
+    margin: 20px auto;
   }
 
   .profile-navigation {
@@ -724,7 +735,6 @@
     flex-direction: column;
     text-align: center;
     padding: 30px 25px;
-    gap: 25px;
   }
 
   .avatar-container {
@@ -732,19 +742,6 @@
     margin-bottom: 20px;
     width: 120px;
     height: 120px;
-  }
-
-  .profile-info h2 {
-    font-size: 2rem;
-  }
-
-  .user-email {
-    font-size: 1rem;
-  }
-
-  .profile-role {
-    font-size: 1rem;
-    padding: 8px 20px;
   }
 
   .logout-btn {
@@ -760,7 +757,6 @@
   }
 
   .info-grid {
-    grid-template-columns: 1fr;
     padding: 25px;
     gap: 20px;
   }
@@ -773,7 +769,6 @@
 
   .club-section-header {
     flex-direction: column;
-    gap: 15px;
     align-items: flex-start;
   }
 
@@ -787,10 +782,6 @@
   .action-buttons {
     flex-direction: column;
     gap: 20px;
-  }
-
-  .clubs-grid {
-    grid-template-columns: 1fr;
   }
 
   .team-btn {
@@ -808,10 +799,6 @@
   .profile-card {
     border-radius: 20px;
     border-width: 1px;
-  }
-
-  .profile-info h2 {
-    font-size: 1.7rem;
   }
 
   .info-value {
@@ -841,7 +828,7 @@
 
 @media (max-width: 350px) {
   .profile-wrapper {
-    margin: 15px 10px;
+    margin: 15px auto;
   }
 
   .profile-header {

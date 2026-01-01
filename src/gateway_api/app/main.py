@@ -200,6 +200,26 @@ async def proxy_users_me(request: Request):
         if resp.status_code >= 400: raise HTTPException(status_code=resp.status_code, detail="No autorizado")
         return resp.json()
 
+@app.put("/users/{user_id}")
+async def proxy_update_user(user_id: int, request: Request):
+    token = request.headers.get("authorization")
+    headers = {"Authorization": token} if token else {}
+    body = await request.json()
+    async with httpx.AsyncClient(headers=headers) as client:
+        resp = await client.put(f"{USERS_SERVICE_URL}/users/{user_id}", json=body)
+        if resp.status_code >= 400:
+            raise HTTPException(status_code=resp.status_code, detail=resp.json().get('detail', 'Error'))
+        return resp.json()
+
+@app.post("/recover")
+async def proxy_recover_password(request: Request):
+    body = await request.json()
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(f"{USERS_SERVICE_URL}/recover", json=body)
+        if resp.status_code >= 400:
+            raise HTTPException(status_code=resp.status_code, detail=resp.json().get('detail', 'Error'))
+        return resp.json()
+
 
 @app.post("/clubs/verify")
 async def proxy_club_verify(request: Request):

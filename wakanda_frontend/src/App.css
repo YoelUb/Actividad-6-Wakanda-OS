@@ -34,7 +34,7 @@ body {
   margin-bottom: 40px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding-bottom: 20px;
-  gap: 20px;
+  gap: clamp(10px, 3vw, 20px);
 }
 
 .logo-container h1 {
@@ -93,8 +93,8 @@ body {
 
 .services-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 25px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: clamp(15px, 2vw, 25px);
   margin-bottom: 40px;
   width: 100%;
 }
@@ -376,7 +376,12 @@ body {
     text-align: center;
   }
   .header-stats {
-    justify-content: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+  .stat-card {
+    flex: 1 1 45%;
+    min-width: 120px;
   }
   .services-grid {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -386,10 +391,23 @@ body {
     text-align: center;
     padding: 20px;
   }
+  .dashboard-header button.vibranium-btn {
+    flex: 1 1 auto;
+    justify-content: center;
+    font-size: 0.8rem;
+    padding: 8px 10px !important;
+  }
 }
 
 @media (max-width: 480px) {
-  .logo-container h1 { font-size: 1.8rem; }
+  .logo-container h1 {
+    font-size: clamp(1.2rem, 5vw, 1.8rem);
+    white-space: nowrap;
+  }
   .services-grid { grid-template-columns: 1fr; }
   .login-box { padding: 20px; }
+  .login-form input.password-input {
+    font-size: 1rem;
+    width: 100%;
+  }
 }

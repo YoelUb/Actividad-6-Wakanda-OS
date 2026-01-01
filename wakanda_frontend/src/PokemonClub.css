@@ -36,7 +36,6 @@
   z-index: 10;
 }
 
-/* Header */
 .poke-theme .wakanda-header {
   display: flex;
   justify-content: space-between;
@@ -45,9 +44,9 @@
   margin-bottom: 3rem;
   border-bottom: 3px solid var(--poke-red);
   padding-bottom: 1rem;
-  gap: 20px;
+  gap: clamp(15px, 3vw, 25px);
   background: rgba(255, 255, 255, 0.9);
-  padding: 20px;
+  padding: clamp(15px, 3vw, 25px);
   border-radius: 15px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 }
@@ -83,7 +82,6 @@
   text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
 }
 
-/* Botón de Salir */
 .poke-theme .rm-btn-exit {
   background: linear-gradient(to bottom, var(--poke-red), #cc0000);
   color: var(--poke-white);
@@ -113,7 +111,6 @@
   box-shadow: 0 2px 0 var(--poke-black);
 }
 
-/* Panel de Control */
 .poke-theme .control-panel {
   background: rgba(255, 255, 255, 0.95);
   border: 4px solid var(--poke-red);
@@ -126,6 +123,7 @@
   max-width: 700px;
   margin-left: auto;
   margin-right: auto;
+  width: 100%;
 }
 
 .poke-theme .control-panel::before {
@@ -247,7 +245,6 @@
   box-shadow: 0 2px 0 var(--poke-black);
 }
 
-/* Sección Destacada */
 .poke-theme .featured-section {
   display: flex;
   justify-content: center;
@@ -305,7 +302,6 @@
   100% { transform: scale(1) rotate(0deg); }
 }
 
-/* Tarjetas */
 .poke-theme .rm-card {
   background: linear-gradient(145deg, var(--poke-card-bg), #ffffff);
   border: 5px solid var(--poke-red);
@@ -484,7 +480,6 @@
   font-family: 'Arial Rounded MT Bold', sans-serif;
 }
 
-/* Divider */
 .poke-theme .divider {
   text-align: center;
   margin: 40px 0;
@@ -521,7 +516,7 @@
 
 .poke-theme .rm-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
   gap: 30px;
   margin-bottom: 50px;
 }
@@ -559,7 +554,6 @@
   75% { transform: translateX(10px); }
 }
 
-/* Responsividad */
 @media (max-width: 768px) {
   .poke-theme .wakanda-wrapper {
     padding: 15px;

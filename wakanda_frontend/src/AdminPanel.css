@@ -676,12 +676,21 @@ body {
   font-family: 'Courier New', monospace;
 }
 
+.table-responsive-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 20px;
+  border-radius: 8px;
+}
+
 .cyber-table {
   width: 100%;
   border-collapse: collapse;
   background: rgba(0, 0, 0, 0.2);
   border-radius: 8px;
   overflow: hidden;
+  min-width: 600px;
 }
 
 .cyber-table th {
@@ -1007,6 +1016,51 @@ body {
   }
   .data-value {
     max-width: 100%;
+  }
+}
+
+@media (max-width: 900px) {
+  .cyber-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-left, .header-right {
+    width: 100%;
+    text-align: center;
+    align-items: center;
+  }
+
+  .logo-container {
+    justify-content: center;
+  }
+
+  .header-right {
+    flex-direction: row;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 15px;
+  }
+}
+
+@media (max-width: 600px) {
+  .metrics-dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-value {
+    font-size: 2rem;
+  }
+
+  .cyber-tabs {
+    flex-direction: column;
+    width: 100%;
+    margin: 0;
+  }
+
+  .tab-btn {
+    width: 100%;
+    margin-bottom: 10px;
   }
 }
 

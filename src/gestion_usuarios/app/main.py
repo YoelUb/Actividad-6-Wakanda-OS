@@ -97,9 +97,20 @@ Base.metadata.create_all(bind=engine)
 class ClubVerify(BaseModel):
     password: str
 
-# --- CORRECCIÓN: Definimos el contexto de seguridad ANTES de usarlo ---
+
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    password: Optional[str] = None
+
+
+class RecoverPassword(BaseModel):
+    secret_key: str
+    new_password: str
+
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
 
 def init_teams():
     db = SessionLocal()
@@ -129,7 +140,7 @@ def init_admin():
         if not exists:
             admin_user = User(
                 email=admin_email,
-                hashed_password=pwd_context.hash("admin123"), # Ahora pwd_context ya existe
+                hashed_password=pwd_context.hash("admin123"),
                 name="T'Challa",
                 last_name="King",
                 role="ADMIN",
@@ -146,7 +157,6 @@ def init_admin():
         db.close()
 
 
-# Ejecutamos la inicialización al final
 init_teams()
 init_admin()
 
@@ -389,7 +399,6 @@ async def upload_avatar(file: UploadFile = File(...), user: User = Depends(get_c
         except Exception as e:
             logger.error(f"Error creando bucket: {e}")
 
-
     try:
         policy = {
             "Version": "2012-10-17",
@@ -447,3 +456,30 @@ def change_team(team_id: int, user: User = Depends(get_current_user), db: Sessio
 @app.get("/me")
 def read_users_me(user: User = Depends(get_current_user)):
     return user
+
+
+@app.put("/users/{user_id}")
+def update_user(user_id: int, user_data: UserUpdate, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    if user_data.username:
+        user.email = user_data.username
+
+    if user_data.password:
+        user.hashed_password = pwd_context.hash(user_data.password)
+
+    db.commit()
+    return {"message": "Usuario actualizado correctamente"}
+
+
+@app.post("/recover")
+def recover_password(data: RecoverPassword, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.club_password == data.secret_key).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Llave secreta inválida")
+
+    user.hashed_password = pwd_context.hash(data.new_password)
+    db.commit()
+    return {"message": "Contraseña restablecida con éxito"}

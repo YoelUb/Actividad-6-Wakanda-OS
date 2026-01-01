@@ -2,10 +2,11 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 90vh;
+  min-height: 100svh;
   width: 100%;
   padding: 2rem;
   animation: slideIn 0.8s ease-out;
+  height: auto;
 }
 
 .register-box {
@@ -18,7 +19,8 @@
     0 0 100px rgba(189, 0, 255, 0.15),
     inset 0 0 40px rgba(0, 0, 0, 0.6);
   max-width: 560px;
-  width: 100%;
+  width: 95%;
+  margin: 20px auto;
   text-align: center;
   position: relative;
   overflow: hidden;
@@ -433,5 +435,17 @@
   .vibranium-btn.secondary {
     font-size: 0.85rem;
     padding: 0.8rem;
+  }
+}
+
+@media (max-height: 700px) {
+  .register-container {
+    padding: 40px 15px;
+    align-items: flex-start;
+  }
+
+  .register-box {
+    margin-top: 20px;
+    padding: 2rem;
   }
 }

@@ -2,11 +2,13 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 80vh;
+  min-height: 100svh;
   width: 100%;
   position: relative;
   z-index: 10;
   animation: fadeIn 0.8s ease-out;
+  padding: 20px;
+  height: auto;
 }
 
 .login-box {
@@ -18,7 +20,8 @@
     0 0 40px rgba(189, 0, 255, 0.25),
     0 0 80px rgba(0, 153, 255, 0.15),
     inset 0 0 30px rgba(0, 0, 0, 0.7);
-  width: 100%;
+  width: 95%;
+  margin: 20px auto;
   max-width: 480px;
   text-align: center;
   backdrop-filter: blur(15px);
@@ -301,7 +304,6 @@
   }
 }
 
-/* Estilos para el wrapper de contraseña en Login */
 .password-wrapper {
   position: relative;
   margin: 1.2rem 0;
@@ -357,7 +359,6 @@
   100% { transform: translateY(-50%) rotate(360deg); }
 }
 
-/* Ajustar el input para que no se solape con el botón */
 .login-input {
   width: 100%;
   padding: 1.2rem 1.5rem;
@@ -426,4 +427,20 @@
   text-align: center;
   margin-top: 15px;
   font-weight: bold;
+}
+
+@media (max-height: 700px) {
+  .login-container {
+    padding: 40px 15px;
+    align-items: flex-start;
+  }
+
+  .login-box {
+    margin-top: 20px;
+    transform: none !important;
+  }
+
+  .secret-icon {
+    display: none;
+  }
 }

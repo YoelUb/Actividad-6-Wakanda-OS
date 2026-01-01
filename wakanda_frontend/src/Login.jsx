@@ -2,236 +2,163 @@ import { useState } from 'react';
 import axios from 'axios';
 import './Login.css';
 
-const USERS_API = "http://localhost:30007";
+const GATEWAY_URL = 'http://localhost:30007';
 
-export default function Login({ onLoginSuccess, switchToRegister }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [step, setStep] = useState(1);
-  const [tempToken, setTempToken] = useState(null);
-  const [code, setCode] = useState('');
-  const [error, setError] = useState('');
+export default function Login({ onLogin, onNavigateToRegister }) {
+  const [formData, setFormData] = useState({ username: '', password: '' });
   const [loading, setLoading] = useState(false);
-  const [method, setMethod] = useState('');
+  const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showCode, setShowCode] = useState(false);
-  const [msg, setMsg] = useState('');
 
-  const handleCredentials = async (e) => {
+  const [showRecover, setShowRecover] = useState(false);
+  const [recoverData, setRecoverData] = useState({ secret_key: '', new_password: '' });
+  const [recoverMsg, setRecoverMsg] = useState({ type: '', text: '' });
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setMsg('');
 
-    const formData = new FormData();
-    formData.append('username', email);
-    formData.append('password', password);
+    const body = new FormData();
+    body.append('username', formData.username);
+    body.append('password', formData.password);
 
     try {
-      const res = await axios.post(`${USERS_API}/login`, formData);
+      const response = await axios.post(`${GATEWAY_URL}/login`, body);
+      const { access_token, status } = response.data;
 
-      if (res.data.status === "2FA_REQUIRED") {
-        setStep(2);
-        setTempToken(res.data.temp_token);
-        setMethod(res.data.method);
-      } else if (res.data.status === "VERIFICATION_REQUIRED") {
-        setStep(3);
-        setError(res.data.msg);
+      if (status === 'VERIFICATION_REQUIRED') {
+        setError('⚠️ Cuenta no verificada. Revisa tu correo.');
       } else {
-        onLoginSuccess(res.data.access_token);
+        sessionStorage.setItem('wakanda_token', `Bearer ${access_token}`);
+        onLogin();
       }
     } catch (err) {
-      setError(err.response?.data?.detail || "Error de autenticación");
+      setError('❌ Credenciales inválidas o error en el sistema');
     } finally {
       setLoading(false);
     }
   };
 
-  const handle2FA = async (e) => {
+  const handleRecover = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
+    setRecoverMsg({ type: '', text: '' });
 
     try {
-      const res = await axios.post(`${USERS_API}/verify-2fa?code=${code}&temp_token=${tempToken}`);
-      onLoginSuccess(res.data.access_token);
+      await axios.post(`${GATEWAY_URL}/recover`, recoverData);
+      setRecoverMsg({ type: 'success', text: '¡Contraseña restablecida! Ahora puedes iniciar sesión.' });
+      setTimeout(() => {
+        setShowRecover(false);
+        setRecoverMsg({ type: '', text: '' });
+        setRecoverData({ secret_key: '', new_password: '' });
+      }, 2500);
     } catch (err) {
-      setError(err.response?.data?.detail || "Código incorrecto");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAccountVerification = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setMsg('');
-
-    const formData = new FormData();
-    formData.append('email', email);
-    formData.append('code', code);
-
-    try {
-      const res = await axios.post(`${USERS_API}/verify-account`, formData);
-      onLoginSuccess(res.data.access_token);
-    } catch (err) {
-      setError(err.response?.data?.detail || "Código de verificación incorrecto");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResendCode = async () => {
-    setLoading(true);
-    setError('');
-    setMsg('');
-
-    const formData = new FormData();
-    formData.append('email', email);
-
-    try {
-      const res = await axios.post(`${USERS_API}/resend-code`, formData);
-      setMsg(res.data.msg || "Código reenviado. Revisa tu correo.");
-    } catch (err) {
-      setError(err.response?.data?.detail || "Error al reenviar código");
-    } finally {
-      setLoading(false);
+      setRecoverMsg({ type: 'error', text: 'Error: Llave secreta incorrecta.' });
     }
   };
 
   return (
     <div className="login-container">
       <div className="login-box">
-        <h2>🔐 WAKANDA ACCESS</h2>
+        <div className="secret-icon">🛡️</div>
+        <h2>ACCESO RESTRINGIDO</h2>
+        <p>Introduce tus credenciales de ciudadano</p>
 
-        {step === 1 && (
-          <form onSubmit={handleCredentials}>
-            <p>Identifícate, ciudadano.</p>
+        <form onSubmit={handleSubmit}>
+          <input
+            className="login-input"
+            type="email"
+            placeholder="Correo electrónico"
+            value={formData.username}
+            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+            required
+          />
 
+          <div className="password-wrapper">
             <input
-              type="email"
-              placeholder="Correo Oficial"
               className="login-input"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
+              type={showPassword ? "text" : "password"}
+              placeholder="Contraseña"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               required
             />
-
-            <div className="password-wrapper">
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Clave de Acceso"
-                className="login-input"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-              />
-              <button
-                type="button"
-                className={`password-toggle ${showPassword ? 'active' : ''}`}
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? "👁️" : "🔒"}
-              </button>
-            </div>
-
-            <button type="submit" className="vibranium-btn" disabled={loading}>
-              {loading ? 'Verificando...' : 'INICIAR SESIÓN'}
-            </button>
-          </form>
-        )}
-
-        {step === 2 && (
-          <form onSubmit={handle2FA}>
-            <div className="secret-icon">🛡️</div>
-            <p>SE REQUIERE AUTENTICACIÓN DE NIVEL 2</p>
-            <p style={{fontSize: '0.9rem', color: '#aaa'}}>
-              {method === 'EMAIL'
-                ? `Hemos enviado un código a tu correo: ${email}`
-                : 'Introduce el código de tu Google Authenticator'}
-            </p>
-
-            <div className="password-wrapper">
-              <input
-                type={showCode ? "text" : "text"}
-                placeholder="000000"
-                className="login-input"
-                value={code}
-                onChange={e => setCode(e.target.value)}
-                maxLength={6}
-                autoFocus
-              />
-              <button
-                type="button"
-                className={`password-toggle ${showCode ? 'active' : ''}`}
-                onClick={() => setShowCode(!showCode)}
-              >
-                {showCode ? "👁️" : "🔒"}
-              </button>
-            </div>
-
-            <button type="submit" className="vibranium-btn" disabled={loading}>
-              {loading ? 'Validando...' : 'VERIFICAR IDENTIDAD'}
-            </button>
-          </form>
-        )}
-
-        {step === 3 && (
-          <form onSubmit={handleAccountVerification}>
-            <div className="secret-icon">📩</div>
-            <p>VERIFICACIÓN DE CUENTA REQUERIDA</p>
-            <p style={{fontSize: '0.9rem', color: '#aaa'}}>
-              Introduce el código enviado a: <br/><strong>{email}</strong>
-            </p>
-
-            <div className="password-wrapper">
-              <input
-                type="text"
-                placeholder="Código de Email"
-                className="login-input"
-                value={code}
-                onChange={e => setCode(e.target.value)}
-                maxLength={6}
-                autoFocus
-              />
-            </div>
-
-            <button type="submit" className="vibranium-btn" disabled={loading}>
-              {loading ? 'Verificando...' : 'ACTIVAR CUENTA'}
-            </button>
-
             <button
               type="button"
-              className="vibranium-btn secondary"
-              onClick={handleResendCode}
-              disabled={loading}
-              style={{marginTop: '10px'}}
+              className={`password-toggle ${showPassword ? 'active' : ''}`}
+              onClick={() => setShowPassword(!showPassword)}
             >
-              Reenviar Código
+              {showPassword ? '👁️' : '🔒'}
             </button>
-          </form>
-        )}
+          </div>
 
-        {error && <div className="error-message" style={{marginTop: '15px'}}>{error}</div>}
-        {msg && <div className="success-message" style={{marginTop: '15px', color: '#2ed573'}}>{msg}</div>}
+          {error && <div className="error-message">{error}</div>}
 
-        {step === 1 && (
-          <button className="vibranium-btn secondary" onClick={switchToRegister}>
-            Solicitar Nueva Ciudadanía (Registro)
+          <button type="submit" className="vibranium-btn" disabled={loading}>
+            {loading ? 'AUTENTICANDO...' : 'INICIAR SESIÓN'}
           </button>
-        )}
+        </form>
 
-        {step !== 1 && (
-           <button
-             className="vibranium-btn secondary"
-             onClick={() => { setStep(1); setError(''); setMsg(''); setCode(''); }}
-             style={{marginTop: '20px'}}
-           >
-             Volver al Login
-           </button>
-        )}
+        <button className="vibranium-btn secondary" onClick={onNavigateToRegister}>
+          SOLICITAR CIUDADANÍA
+        </button>
+
+        <button
+          type="button"
+          className="vibranium-btn secondary"
+          style={{marginTop: '10px', fontSize: '0.8rem', border: 'none', color: 'var(--neon-purple)'}}
+          onClick={() => setShowRecover(true)}
+        >
+          ¿Olvidaste la contraseña? Usar Llave Maestra
+        </button>
       </div>
+
+      {showRecover && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          background: 'rgba(0,0,0,0.9)', zIndex: 2000, display: 'flex',
+          justifyContent: 'center', alignItems: 'center', padding: '20px'
+        }}>
+          <div className="login-box" style={{maxWidth: '400px', margin: '0', border: '2px solid var(--neon-purple)', transform: 'none'}}>
+            <h2 style={{fontSize: '1.5rem', marginBottom: '15px'}}>Protocolo de Recuperación</h2>
+            <p style={{marginBottom: '20px'}}>Introduce tu Llave Vibranium (Secret Key) para restablecer el acceso.</p>
+
+            <form onSubmit={handleRecover}>
+              <input
+                className="login-input"
+                type="text"
+                placeholder="Pegar Secret Key aquí..."
+                value={recoverData.secret_key}
+                onChange={(e) => setRecoverData({...recoverData, secret_key: e.target.value})}
+                required
+              />
+              <input
+                className="login-input"
+                type="password"
+                placeholder="Nueva Contraseña"
+                value={recoverData.new_password}
+                onChange={(e) => setRecoverData({...recoverData, new_password: e.target.value})}
+                required
+              />
+
+              {recoverMsg.text && (
+                <div className={recoverMsg.type === 'error' ? 'error-message' : 'success-message'}>
+                  {recoverMsg.text}
+                </div>
+              )}
+
+              <button type="submit" className="vibranium-btn">RESTABLECER ACCESO</button>
+              <button
+                type="button"
+                className="vibranium-btn secondary"
+                onClick={() => setShowRecover(false)}
+              >
+                CANCELAR OPERACIÓN
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
