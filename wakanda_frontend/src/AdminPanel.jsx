@@ -31,6 +31,11 @@ export default function AdminPanel({ onExit }) {
     return () => clearInterval(interval);
   }, [activeTab]);
 
+  const getAuthHeader = () => {
+    const token = sessionStorage.getItem('wakanda_token');
+    return token ? `Bearer ${token}` : '';
+  };
+
   const fetchData = async () => {
     try {
       if (activeTab === 'services') {
@@ -60,11 +65,11 @@ export default function AdminPanel({ onExit }) {
       else if (activeTab === 'users') {
         try {
             const usersRes = await axios.get(`${GATEWAY_URL}/users`, {
-                headers: { Authorization: sessionStorage.getItem('wakanda_token') }
+                headers: { Authorization: getAuthHeader() }
             });
             setUsers(usersRes.data);
         } catch (err) {
-            console.warn("No se pudo obtener la lista de usuarios");
+            console.warn("No se pudo obtener la lista de usuarios", err);
         }
       }
 
@@ -89,10 +94,21 @@ export default function AdminPanel({ onExit }) {
 
   const handleUpdateUser = async (e) => {
     e.preventDefault();
+
+    if (!editForm.username.endsWith('@wakanda.es')) {
+        alert("❌ RESTRICCIÓN DE SEGURIDAD: El administrador solo puede asignar correos oficiales del dominio @wakanda.es");
+        return;
+    }
+
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (editForm.password && !passwordRegex.test(editForm.password)) {
+        alert("❌ SEGURIDAD DÉBIL: La contraseña establecida por el administrador debe tener al menos 8 caracteres, una mayúscula y un número.");
+        return;
+    }
+
     try {
-      const token = sessionStorage.getItem('wakanda_token');
       await axios.put(`${GATEWAY_URL}/users/${editingUser.id}`, editForm, {
-        headers: { Authorization: token }
+        headers: { Authorization: getAuthHeader() }
       });
       alert("✅ Credenciales actualizadas correctamente");
       setEditingUser(null);

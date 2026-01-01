@@ -16,6 +16,7 @@ function ServiceCard({ title, endpoint, icon, theme = 'default' }) {
     const [data, setData] = useState(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [lastUpdated, setLastUpdated] = useState(null);
     const abortControllerRef = useRef(null);
 
@@ -28,10 +29,13 @@ function ServiceCard({ title, endpoint, icon, theme = 'default' }) {
         security: 'service-card security-theme'
     };
 
-    const fetchData = async () => {
+    const fetchData = async (isManualRefresh = false) => {
         if (abortControllerRef.current) abortControllerRef.current.abort();
         abortControllerRef.current = new AbortController();
-        setLoading(true);
+
+        if (isManualRefresh) setRefreshing(true);
+        else setLoading(true);
+
         setError(null);
         try {
             const response = await axios.get(`${GATEWAY_URL}${endpoint}`, {
@@ -43,12 +47,13 @@ function ServiceCard({ title, endpoint, icon, theme = 'default' }) {
             if (!axios.isCancel(err)) setError(err.response?.data?.message || err.message || 'Error de conexión');
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     };
 
     useEffect(() => {
         fetchData();
-        const interval = setInterval(fetchData, 5000);
+        const interval = setInterval(() => fetchData(false), 5000);
         return () => {
             clearInterval(interval);
             if (abortControllerRef.current) abortControllerRef.current.abort();
@@ -61,37 +66,74 @@ function ServiceCard({ title, endpoint, icon, theme = 'default' }) {
         second: '2-digit'
     });
 
+    const formatLabel = (key) => {
+        return key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
+    };
+
+    const formatValue = (value) => {
+        if (Array.isArray(value)) return value.join(', ');
+        if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+        return String(value);
+    };
+
     return (
         <div className={themeClasses[theme]}>
             <div className="card-header">
                 <div className="card-icon">{icon}</div>
                 <h3>{title}</h3>
                 <div className="status-indicator">
-                    <div className={`status-dot ${loading ? 'loading' : error ? 'error' : 'success'}`} />
+                    <div className={`status-dot ${loading || refreshing ? 'loading' : error ? 'error' : 'success'}`} />
                 </div>
             </div>
             <div className="card-body">
                 {loading && !data && <div className="loading-state"><span>Conectando...</span></div>}
                 {error && <div className="error-state">{error}</div>}
+
                 {data && (
                     <div className="data-container">
+                        {data.status && (
+                            <div className="data-row main-status" style={{borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px', marginBottom: '10px'}}>
+                                <span className="data-label" style={{color: 'var(--neon-blue)'}}>ESTADO ACTUAL</span>
+                                <span className="data-value vibranium" style={{fontSize: '1.1rem'}}>{data.status}</span>
+                            </div>
+                        )}
+
                         <div className="data-grid">
-                            <div className="data-row"><span className="data-label">Estado:</span><span
-                                className="data-value vibranium">{data.status || 'Operativo'}</span></div>
-                            {data.db_connection &&
-                                <div className="data-row"><span className="data-label">DB:</span><span
-                                    className="db-status active">{data.db_connection}</span></div>}
-                        </div>
-                        <div className="data-raw">
-                            <pre>{JSON.stringify(data, null, 2)}</pre>
+                            {Object.entries(data).map(([key, value]) => {
+                                if (key === 'status' || key === 'db_connection') return null;
+                                return (
+                                    <div key={key} className="data-row">
+                                        <span className="data-label">{formatLabel(key)}</span>
+                                        <span className="data-value">{formatValue(value)}</span>
+                                    </div>
+                                );
+                            })}
+
+                            {data.db_connection && (
+                                <div className="data-row" style={{marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed rgba(255,255,255,0.1)'}}>
+                                    <span className="data-label">Base de Datos</span>
+                                    <span className={`db-status ${data.db_connection === 'OK' ? 'active' : 'inactive'}`}>
+                                        {data.db_connection}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
             </div>
             <div className="card-footer">
-                <div className="update-info">{lastUpdated &&
-                    <span className="timestamp">{formatTime(lastUpdated)}</span>}</div>
-                <button className="vibranium-btn" onClick={fetchData} disabled={loading}>Actualizar</button>
+                <div className="update-info">
+                    {lastUpdated && <span className="timestamp">Actualizado: {formatTime(lastUpdated)}</span>}
+                </div>
+                <button
+                    className="vibranium-btn"
+                    onClick={() => fetchData(true)}
+                    disabled={loading || refreshing}
+                    style={{minWidth: '100px', display: 'flex', justifyContent: 'center', gap: '5px'}}
+                >
+                    {(loading || refreshing) && <span className="spin-icon">↻</span>}
+                    {refreshing ? '...' : 'Actualizar'}
+                </button>
             </div>
         </div>
     );

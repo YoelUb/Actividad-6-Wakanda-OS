@@ -25,17 +25,21 @@ export default function Register({ switchToLogin }) {
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
-  const nameRegex = /^[a-zA-ZÀ-ÿ\s]+$/;
+
+  const handleNameChange = (e, field) => {
+    const val = e.target.value;
+    if (/^[a-zA-ZÀ-ÿ\s]*$/.test(val)) {
+      setFormData(prev => ({ ...prev, [field]: val }));
+    }
+  };
 
   const validateField = (field, value) => {
     switch(field) {
       case 'name':
         if (!value.trim()) return 'El nombre es requerido';
-        if (!nameRegex.test(value)) return 'Solo letras y espacios';
         return '';
       case 'lastName':
         if (!value.trim()) return 'Los apellidos son requeridos';
-        if (!nameRegex.test(value)) return 'Solo letras y espacios';
         return '';
       case 'email':
         if (!value.trim()) return 'El email es requerido';
@@ -96,13 +100,8 @@ export default function Register({ switchToLogin }) {
 
     try {
       await axios.post(`${USERS_API}/register`, data);
-
-      // ALERTA: Notificar al usuario antes de cambiar de pantalla
       alert(`Registro exitoso. Se ha enviado un código a ${formData.email}. Úsalo para iniciar sesión.`);
-
-      // Redirigir al usuario al Login para que verifique su cuenta
       switchToLogin();
-
     } catch (err) {
       setError(err.response?.data?.detail || "Error en el sistema de registro");
     } finally {
@@ -120,10 +119,10 @@ export default function Register({ switchToLogin }) {
             <div className="form-group">
               <input
                 type="text"
-                placeholder="Nombre *"
+                placeholder="Nombre (Solo letras) *"
                 className={`register-input ${touched.name && errors.name ? 'input-error' : ''}`}
                 value={formData.name}
-                onChange={e => setFormData({...formData, name: e.target.value})}
+                onChange={(e) => handleNameChange(e, 'name')}
                 onBlur={() => handleBlur('name')}
                 required
               />
@@ -135,10 +134,10 @@ export default function Register({ switchToLogin }) {
             <div className="form-group">
               <input
                 type="text"
-                placeholder="Apellidos *"
+                placeholder="Apellidos (Solo letras) *"
                 className={`register-input ${touched.lastName && errors.lastName ? 'input-error' : ''}`}
                 value={formData.lastName}
-                onChange={e => setFormData({...formData, lastName: e.target.value})}
+                onChange={(e) => handleNameChange(e, 'lastName')}
                 onBlur={() => handleBlur('lastName')}
                 required
               />
