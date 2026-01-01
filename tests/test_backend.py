@@ -1,10 +1,13 @@
 import os
+import sys
 import pytest
 import asyncio
 from unittest.mock import MagicMock, patch, AsyncMock
 from datetime import datetime, timedelta
 from fastapi.testclient import TestClient
 from jose import jwt
+
+sys.modules["wakanda_common"] = MagicMock()
 
 os.environ["DATABASE_URL"] = "sqlite:///./test.db"
 os.environ["SECRET_KEY"] = "super-secret-test-key"
@@ -17,6 +20,7 @@ os.environ["USERS_SERVICE_URL"] = "http://mock-users"
 
 from src.gateway_api.app.main import app as gateway_app, check_restart_mode, restarting_services
 from src.gestion_usuarios.app.main import create_access_token, ALGORITHM, SECRET_KEY, app as users_app, pwd_context
+from src.gestion_agua.app.main import get_water_pressure
 
 client_gateway = TestClient(gateway_app)
 client_users = TestClient(users_app)
@@ -43,6 +47,8 @@ def test_check_restart_mode_expired():
 
 @patch("src.gateway_api.app.main.fetch_from_service")
 def test_gateway_proxy_traffic_status(mock_fetch):
+    restarting_services.clear()
+
     mock_response = MagicMock()
     mock_response.json.return_value = {"status": "OK", "congestion": "LOW"}
     mock_fetch.return_value = mock_response
@@ -169,6 +175,7 @@ def test_login_unverified_user(mock_session):
     mock_user = MagicMock()
     mock_user.hashed_password = pwd_context.hash("pass")
     mock_user.is_verified = False
+    mock_user.email_code_expires_at = None
 
     mock_db.query.return_value.filter.return_value.first.return_value = mock_user
 
@@ -186,12 +193,10 @@ def test_protected_route_without_token():
 
 @patch("src.gestion_agua.app.main.AsyncSessionLocal")
 def test_water_pressure_data_structure(mock_session):
-    with patch.dict(os.environ, {"DATABASE_URL": "sqlite:///./water.db"}):
-        from src.gestion_agua.app.main import get_water_pressure
-        mock_db = MagicMock()
-        result = asyncio.run(get_water_pressure(mock_db))
+    mock_db = MagicMock()
+    result = asyncio.run(get_water_pressure(mock_db))
 
-        assert "pressure_psi" in result
-        assert "purity_level" in result
-        assert result["service"] == "Gestión de Agua"
-        assert 35 <= result["pressure_psi"] <= 90
+    assert "pressure_psi" in result
+    assert "purity_level" in result
+    assert result["service"] == "Gestión de Agua"
+    assert 35 <= result["pressure_psi"] <= 90
