@@ -1,11 +1,12 @@
 import os
+import random
 from fastapi import FastAPI, Depends
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from prometheus_client import make_asgi_app, Counter
 from wakanda_common import get_db_engine, get_db_session_maker
 
-app = FastAPI(title="Servicio de Seguridad Wakanda")
+app = FastAPI(title="Servicio de seguridad y drones")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 engine = get_db_engine(DATABASE_URL)
@@ -22,7 +23,7 @@ app.mount("/metrics", metrics_app)
 @app.get("/security/alerts")
 async def get_security_alerts(db: AsyncSession = Depends(get_db)):
     """
-    Consulta el estado de alertas de seguridad en la ciudad
+    Simula el sistema de defensa fronteriza
     """
     SECURITY_REQUESTS.inc()
     try:
@@ -31,11 +32,16 @@ async def get_security_alerts(db: AsyncSession = Depends(get_db)):
     except Exception as e:
         db_status = f"Error DB: {str(e)}"
 
+    alertas = ["VERDE", "AMARILLA", "NARANJA", "ROJA"]
+    nivel = random.choice(alertas)
+
     return {
-        "service": "Seguridad y Vigilancia",
-        "status": "Alerta Amarilla",
-        "active_drones": 14,
-        "sector_patrol": "Norte",
+        "service": "Seguridad Fronteriza",
+        "status": "VIGILANCIA ACTIVA",
+        "alert_level": nivel,
+        "border_integrity": f"{random.uniform(92.0, 100.0):.2f}%",
+        "detected_threats": random.randint(0, 5) if nivel != "VERDE" else 0,
+        "patrol_drones": random.randint(20, 60),
         "db_connection": db_status
     }
 

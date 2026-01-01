@@ -33,13 +33,24 @@ function ServiceCard({ title, endpoint, icon, theme = 'default' }) {
         if (abortControllerRef.current) abortControllerRef.current.abort();
         abortControllerRef.current = new AbortController();
 
-        if (isManualRefresh) setRefreshing(true);
-        else setLoading(true);
+        if (isManualRefresh) {
+            setRefreshing(true);
+        } else if (!data) {
+            setLoading(true);
+        }
 
         setError(null);
         try {
+            const timestamp = Date.now();
             const response = await axios.get(`${GATEWAY_URL}${endpoint}`, {
-                signal: abortControllerRef.current.signal, timeout: 3000
+                params: { _: timestamp },
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                },
+                signal: abortControllerRef.current.signal,
+                timeout: 3000
             });
             setData(response.data);
             setLastUpdated(new Date());
@@ -53,7 +64,7 @@ function ServiceCard({ title, endpoint, icon, theme = 'default' }) {
 
     useEffect(() => {
         fetchData();
-        const interval = setInterval(() => fetchData(false), 5000);
+        const interval = setInterval(() => fetchData(false), 3000);
         return () => {
             clearInterval(interval);
             if (abortControllerRef.current) abortControllerRef.current.abort();
@@ -82,11 +93,11 @@ function ServiceCard({ title, endpoint, icon, theme = 'default' }) {
                 <div className="card-icon">{icon}</div>
                 <h3>{title}</h3>
                 <div className="status-indicator">
-                    <div className={`status-dot ${loading || refreshing ? 'loading' : error ? 'error' : 'success'}`} />
+                    <div className={`status-dot ${loading && !data ? 'loading' : error ? 'error' : 'success'}`} />
                 </div>
             </div>
             <div className="card-body">
-                {loading && !data && <div className="loading-state"><span>Conectando...</span></div>}
+                {loading && !data && <div className="loading-state"><span>Conectando sistemas...</span></div>}
                 {error && <div className="error-state">{error}</div>}
 
                 {data && (
@@ -129,10 +140,10 @@ function ServiceCard({ title, endpoint, icon, theme = 'default' }) {
                     className="vibranium-btn"
                     onClick={() => fetchData(true)}
                     disabled={loading || refreshing}
-                    style={{minWidth: '100px', display: 'flex', justifyContent: 'center', gap: '5px'}}
+                    style={{minWidth: '110px', display: 'flex', justifyContent: 'center', gap: '8px'}}
                 >
                     {(loading || refreshing) && <span className="spin-icon">↻</span>}
-                    {refreshing ? '...' : 'Actualizar'}
+                    {refreshing ? 'Cargando' : 'Actualizar'}
                 </button>
             </div>
         </div>

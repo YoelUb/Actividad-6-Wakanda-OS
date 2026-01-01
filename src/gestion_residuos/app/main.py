@@ -1,11 +1,12 @@
 import os
+import random
 from fastapi import FastAPI, Depends
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from prometheus_client import make_asgi_app, Counter
 from wakanda_common import get_db_engine, get_db_session_maker
 
-app = FastAPI(title="Servicio de Residuos Wakanda")
+app = FastAPI(title="Servicio de gestión de residuos")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 engine = get_db_engine(DATABASE_URL)
@@ -22,7 +23,7 @@ app.mount("/metrics", metrics_app)
 @app.get("/waste/status")
 async def get_waste_status(db: AsyncSession = Depends(get_db)):
     """
-    Consulta el estado de los contenedores inteligentes
+    Simula el estado de la recolección y reciclaje
     """
     WASTE_REQUESTS.inc()
     try:
@@ -33,9 +34,11 @@ async def get_waste_status(db: AsyncSession = Depends(get_db)):
 
     return {
         "service": "Gestión de Residuos",
-        "status": "Operativo",
-        "containers_full": 12,
-        "next_pickup": "14:00",
+        "status": "OPERATIVO",
+        "trucks_active": random.randint(5, 30),
+        "recycling_centers_online": random.randint(2, 5),
+        "avg_bin_fill_level": f"{random.randint(10, 95)}%",
+        "incinerator_temp": f"{random.randint(850, 1250)}°C",
         "db_connection": db_status
     }
 

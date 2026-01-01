@@ -2,7 +2,7 @@ import os
 import httpx
 import random
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from kubernetes import client, config
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from .resilience import fetch_from_service, post_to_service
@@ -29,6 +29,9 @@ SECRET_CLUB_API_URL = "https://rickandmortyapi.com/api/character"
 POKEMON_API_URL = "https://pokeapi.co/api/v2/pokemon"
 HARRY_POTTER_API_URL = "https://hp-api.onrender.com/api/characters"
 
+restarting_services = {}
+RESTART_DURATION = 10
+
 origins = ["http://localhost:30000", "http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:30000", "*"]
 
 app.add_middleware(
@@ -40,6 +43,16 @@ app.add_middleware(
 )
 
 
+def check_restart_mode(service_name: str):
+    if service_name in restarting_services:
+        start_time = restarting_services[service_name]
+        if datetime.now() - start_time < timedelta(seconds=RESTART_DURATION):
+            return True
+        else:
+            del restarting_services[service_name]
+    return False
+
+
 @app.get("/")
 async def root():
     return {"message": "Wakanda OS Gateway Online", "status": "OK"}
@@ -47,30 +60,75 @@ async def root():
 
 @app.get("/traffic/status")
 async def proxy_traffic():
+    if check_restart_mode("ms-trafico"):
+        return {
+            "status": "⚠️ REINICIANDO SISTEMA",
+            "congestion_level": "CALIBRANDO SENSORES...",
+            "avg_speed": "---",
+            "active_drones": 0,
+            "incidents_reported": 0,
+            "db_connection": "MAINTENANCE"
+        }
     async with httpx.AsyncClient() as client:
         return (await fetch_from_service(f"{TRAFFIC_SERVICE_URL}/traffic/status", client)).json()
 
 
 @app.get("/energy/grid")
 async def proxy_energy():
+    if check_restart_mode("ms-energia"):
+        return {
+            "status": "⚡ REINICIANDO RED",
+            "voltage_v": 0,
+            "frequency_hz": 0,
+            "vibranium_core_load": "ESTABILIZANDO...",
+            "active_turbines": 0,
+            "db_connection": "MAINTENANCE"
+        }
     async with httpx.AsyncClient() as client:
         return (await fetch_from_service(f"{ENERGY_SERVICE_URL}/energy/grid", client)).json()
 
 
 @app.get("/water/pressure")
 async def proxy_water():
+    if check_restart_mode("ms-agua"):
+        return {
+            "status": "💧 PURGANDO TUBERÍAS",
+            "pressure_psi": 0,
+            "ph_level": 0,
+            "purity_level": "ANALIZANDO...",
+            "reserve_level": "---",
+            "db_connection": "MAINTENANCE"
+        }
     async with httpx.AsyncClient() as client:
         return (await fetch_from_service(f"{WATER_SERVICE_URL}/water/pressure", client)).json()
 
 
 @app.get("/waste/status")
 async def proxy_waste():
+    if check_restart_mode("ms-residuos"):
+        return {
+            "status": "♻️ REINICIANDO COMPACTADORES",
+            "trucks_active": 0,
+            "recycling_centers_online": 0,
+            "avg_bin_fill_level": "---",
+            "incinerator_temp": "ENFRIANDO...",
+            "db_connection": "MAINTENANCE"
+        }
     async with httpx.AsyncClient() as client:
         return (await fetch_from_service(f"{WASTE_SERVICE_URL}/waste/status", client)).json()
 
 
 @app.get("/security/alerts")
 async def proxy_security():
+    if check_restart_mode("ms-seguridad"):
+        return {
+            "status": "🛡️ REINICIANDO PROTOCOLOS",
+            "alert_level": "NEUTRAL",
+            "border_integrity": "ESCANEANDO...",
+            "detected_threats": 0,
+            "patrol_drones": 0,
+            "db_connection": "MAINTENANCE"
+        }
     async with httpx.AsyncClient() as client:
         return (await fetch_from_service(f"{SECURITY_SERVICE_URL}/security/alerts", client)).json()
 
@@ -153,17 +211,6 @@ async def proxy_login(request: Request):
     data = dict(form_data)
     async with httpx.AsyncClient() as client:
         resp = await post_to_service(f"{USERS_SERVICE_URL}/login", data=data, client=client)
-        if resp.status_code >= 400: raise HTTPException(status_code=resp.status_code,
-                                                        detail=resp.json().get('detail', 'Error'))
-        return resp.json()
-
-
-@app.post("/verify-2fa")
-async def proxy_verify_2fa(code: str, temp_token: str):
-    async with httpx.AsyncClient() as client:
-        url = f"{USERS_SERVICE_URL}/verify-2fa"
-        params = {"code": code, "temp_token": temp_token}
-        resp = await post_to_service(url, params=params, client=client)
         if resp.status_code >= 400: raise HTTPException(status_code=resp.status_code,
                                                         detail=resp.json().get('detail', 'Error'))
         return resp.json()
@@ -284,12 +331,16 @@ async def proxy_upload_avatar(request: Request):
 @app.post("/admin/restart/{service_name}")
 def restart_service(service_name: str):
     try:
+        logger.info(f"🔄 Activando modo mantenimiento para {service_name}")
+        restarting_services[service_name] = datetime.now()
+
         try:
             config.load_incluster_config()
         except:
-            config.load_kube_config()
-
-        logger.info(f"🚀 Solicitando reinicio de {service_name}")
+            try:
+                config.load_kube_config()
+            except:
+                logger.warning("No se pudo cargar configuración de K8s. Ejecutando en modo simulación local.")
 
         v1 = client.AppsV1Api()
         patch_body = {
@@ -304,10 +355,11 @@ def restart_service(service_name: str):
             }
         }
         v1.patch_namespaced_deployment(name=service_name, namespace="default", body=patch_body)
+
         return {"status": f"Reiniciando servicio {service_name}...", "timestamp": str(datetime.now())}
     except Exception as e:
         logger.error(f"⛔ FALLO AL REINICIAR {service_name}: {str(e)}")
-        return {"error": f"Error al reiniciar: {str(e)}"}
+        return {"status": "Reinicio simulado activado (K8s no disponible)", "error": str(e)}
 
 
 @app.get("/admin/k8s/info")
@@ -354,7 +406,6 @@ def get_k8s_info():
 
             raw_name = p.metadata.name
             clean_name = raw_name
-
             parts = raw_name.split('-')
 
             if len(parts) >= 3:
@@ -363,10 +414,8 @@ def get_k8s_info():
                     clean_name = friendly_names[potential_name]
                 else:
                     clean_name = potential_name
-
             elif len(parts) == 2 and parts[0] == "minio":
                 clean_name = friendly_names.get("minio", "Minio")
-
             else:
                 for key, val in friendly_names.items():
                     if raw_name.startswith(key):
@@ -387,7 +436,6 @@ def get_k8s_info():
         for n in nodes.items:
             raw_node_name = n.metadata.name
             display_name = raw_node_name
-
             if "docker-desktop" in raw_node_name.lower():
                 display_name = "CLUSTER-WAKANDA"
             elif "minikube" in raw_node_name.lower():
