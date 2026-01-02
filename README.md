@@ -23,8 +23,8 @@
 - [Requisitos previos](#requisitos-previos)
 - [Instalación](#instalación)
 - [Pruebas (testing)](#pruebas-testing)
-- [Usuarios](#usuarios-)
-- [Contacto](#contacto-)
+- [Usuarios](#usuarios)
+- [Contacto](#contacto)
 
 ---
 
