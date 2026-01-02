@@ -23,6 +23,7 @@
 - [Requisitos previos](#requisitos-previos)
 - [Instalación](#instalación)
 - [Pruebas (testing)](#pruebas-testing)
+- [Usuarios](#usuarios-)
 - [Contacto](#contacto-)
 
 ---
@@ -214,6 +215,15 @@ Las pruebas de backend verifican la integridad de los microservicios, la lógica
 ```bash
   npm test
 ```
+
+---
+
+## Usuarios 
+
+
+- El **administrador** de prueba para la demo del programa viene por defecto:
+- Usuario => **admin@wakanda.es**
+- Contraseña => **admin123**
 
 ---
 
