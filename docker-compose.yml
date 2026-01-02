@@ -1,0 +1,157 @@
+version: '3.8'
+
+services:
+  postgres_db:
+    image: postgres:15-alpine
+    container_name: wakanda_db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: default_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./src/init_databases.sql:/docker-entrypoint-initdb.d/init_databases.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d default_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  gestion_trafico:
+    build:
+      context: ./src
+      dockerfile: gestion_trafico/Dockerfile
+    container_name: ms_trafico
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=${DATABASE_URL_TRAFFIC}
+    ports:
+      - "8001:8000"
+
+  gestion_energia:
+    build:
+      context: ./src
+      dockerfile: gestion_energia/Dockerfile
+    container_name: ms_energia
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=${DATABASE_URL_ENERGY}
+    ports:
+      - "8002:8000"
+
+  gestion_agua:
+    build:
+      context: ./src
+      dockerfile: gestion_agua/Dockerfile
+    container_name: ms_agua
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=${DATABASE_URL_WATER}
+    ports:
+      - "8003:8000"
+
+  seguridad_vigilancia:
+    build:
+      context: ./src
+      dockerfile: gestion_vigilancia/Dockerfile
+    container_name: ms_seguridad
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=${DATABASE_URL_SECURITY}
+    ports:
+      - "8004:8000"
+
+  gestion_residuos:
+    build:
+      context: ./src
+      dockerfile: gestion_residuos/Dockerfile
+    container_name: ms_residuos
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=${DATABASE_URL_WASTE}
+    ports:
+      - "8005:8000"
+
+  gateway_api:
+    build:
+      context: ./src
+      dockerfile: gateway_api/Dockerfile
+    container_name: ms_gateway
+    depends_on:
+      - gestion_trafico
+      - gestion_energia
+      - gestion_agua
+      - gestion_residuos
+      - seguridad_vigilancia
+      - gestion_usuarios
+    environment:
+      - TRAFFIC_SERVICE_URL=http://gestion_trafico:8000
+      - ENERGY_SERVICE_URL=http://gestion_energia:8000
+      - WATER_SERVICE_URL=http://gestion_agua:8000
+      - WASTE_SERVICE_URL=http://gestion_residuos:8000
+      - SECURITY_SERVICE_URL=http://seguridad_vigilancia:8000
+      - USERS_SERVICE_URL=http://gestion_usuarios:8000
+      - SECRET_CLUB_API_URL=${SECRET_CLUB_API_URL}
+    ports:
+      - "8000:8000"
+
+  gestion_usuarios:
+    build:
+      context: ./src
+      dockerfile: gestion_usuarios/Dockerfile
+    container_name: ms_usuarios
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    environment:
+      - DATABASE_URL=${DATABASE_URL_USERS}
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD}
+      - SECRET_KEY=${SECRET_KEY}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_SERVER=${MAIL_SERVER}
+
+    ports:
+      - "8006:8000"
+
+  minio:
+    image: minio/minio
+    container_name: wakanda_minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+
+  wakanda_frontend:
+    build:
+      context: ./wakanda_frontend
+      dockerfile: Dockerfile
+    container_name: wakanda_dashboard
+    ports:
+      - "3000:80"
+    depends_on:
+      - gateway_api
+
+volumes:
+  minio_data:

@@ -1,0 +1,289 @@
+apiVersion: v1
+kind: List
+items:
+# --- TRÁFICO ---
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ms-trafico
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: ms-trafico
+    template:
+      metadata:
+        labels:
+          app: ms-trafico
+      spec:
+        initContainers:
+        - name: wait-for-db
+          image: busybox:1.28
+          command: ['sh', '-c', "until nslookup wakanda-db; do echo waiting for wakanda-db; sleep 2; done"]
+        containers:
+        - name: app
+          image: wakanda/trafico:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+          - containerPort: 8000
+          env:
+          - name: DATABASE_URL
+            value: "postgresql+asyncpg://admin:admin@wakanda-db:5432/traffic_db"
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: gestion-trafico
+  spec:
+    selector:
+      app: ms-trafico
+    ports:
+      - port: 8000
+
+# --- ENERGÍA ---
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ms-energia
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: ms-energia
+    template:
+      metadata:
+        labels:
+          app: ms-energia
+      spec:
+        initContainers:
+        - name: wait-for-db
+          image: busybox:1.28
+          command: ['sh', '-c', "until nslookup wakanda-db; do echo waiting for wakanda-db; sleep 2; done"]
+        containers:
+        - name: app
+          image: wakanda/energia:latest
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: DATABASE_URL
+            value: "postgresql+asyncpg://admin:admin@wakanda-db:5432/energy_db"
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: gestion-energia
+  spec:
+    selector:
+      app: ms-energia
+    ports:
+      - port: 8000
+
+# --- AGUA ---
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ms-agua
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: ms-agua
+    template:
+      metadata:
+        labels:
+          app: ms-agua
+      spec:
+        initContainers:
+        - name: wait-for-db
+          image: busybox:1.28
+          command: ['sh', '-c', "until nslookup wakanda-db; do echo waiting for wakanda-db; sleep 2; done"]
+        containers:
+        - name: app
+          image: wakanda/agua:latest
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: DATABASE_URL
+            value: "postgresql+asyncpg://admin:admin@wakanda-db:5432/water_db"
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: gestion-agua
+  spec:
+    selector:
+      app: ms-agua
+    ports:
+      - port: 8000
+
+# --- RESIDUOS ---
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ms-residuos
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: ms-residuos
+    template:
+      metadata:
+        labels:
+          app: ms-residuos
+      spec:
+        initContainers:
+        - name: wait-for-db
+          image: busybox:1.28
+          command: ['sh', '-c', "until nslookup wakanda-db; do echo waiting for wakanda-db; sleep 2; done"]
+        containers:
+        - name: app
+          image: wakanda/residuos:latest
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: DATABASE_URL
+            value: "postgresql+asyncpg://admin:admin@wakanda-db:5432/waste_db"
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: gestion-residuos
+  spec:
+    selector:
+      app: ms-residuos
+    ports:
+      - port: 8000
+
+# --- SEGURIDAD ---
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ms-seguridad
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: ms-seguridad
+    template:
+      metadata:
+        labels:
+          app: ms-seguridad
+      spec:
+        initContainers:
+        - name: wait-for-db
+          image: busybox:1.28
+          command: ['sh', '-c', "until nslookup wakanda-db; do echo waiting for wakanda-db; sleep 2; done"]
+        containers:
+        - name: app
+          image: wakanda/seguridad:latest
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: DATABASE_URL
+            value: "postgresql+asyncpg://admin:admin@wakanda-db:5432/security_db"
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: seguridad-vigilancia
+  spec:
+    selector:
+      app: ms-seguridad
+    ports:
+      - port: 8000
+
+# --- USUARIOS ---
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ms-usuarios
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: ms-usuarios
+    template:
+      metadata:
+        labels:
+          app: ms-usuarios
+      spec:
+        initContainers:
+        - name: wait-for-db
+          image: busybox:1.28
+          command: ['sh', '-c', "until nslookup wakanda-db; do echo waiting for wakanda-db; sleep 2; done"]
+        containers:
+        - name: app
+          image: wakanda/usuarios:latest
+          imagePullPolicy: Never
+          ports:
+          - containerPort: 8000
+          env:
+          - name: DATABASE_URL
+            value: "postgresql+psycopg2://admin:admin@wakanda-db:5432/users_db"
+          - name: MINIO_ENDPOINT
+            value: "http://minio:9000"
+          - name: MINIO_ACCESS_KEY
+            valueFrom: { secretKeyRef: { name: wakanda-secrets, key: MINIO_ROOT_USER } }
+          - name: MINIO_SECRET_KEY
+            valueFrom: { secretKeyRef: { name: wakanda-secrets, key: MINIO_ROOT_PASSWORD } }
+          - name: SECRET_KEY
+            valueFrom: { secretKeyRef: { name: wakanda-secrets, key: SECRET_KEY } }
+          - name: MAIL_USERNAME
+            valueFrom: { secretKeyRef: { name: wakanda-secrets, key: MAIL_USERNAME } }
+          - name: MAIL_PASSWORD
+            valueFrom: { secretKeyRef: { name: wakanda-secrets, key: MAIL_PASSWORD } }
+          - name: MAIL_SERVER
+            value: "smtp.gmail.com"
+          - name: MAIL_PORT
+            value: "587"
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: gestion-usuarios
+  spec:
+    selector:
+      app: ms-usuarios
+    ports:
+      - port: 8000
+
+# --- GATEWAY API ---
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ms-gateway
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: ms-gateway
+    template:
+      metadata:
+        labels:
+          app: ms-gateway
+      spec:
+        # Permiso para ver/reiniciar pods
+        serviceAccountName: gateway-sa
+        containers:
+        - name: app
+          image: wakanda-gateway:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+          - containerPort: 8000
+          env:
+          - name: TRAFFIC_SERVICE_URL
+            value: "http://gestion-trafico:8000"
+          - name: ENERGY_SERVICE_URL
+            value: "http://gestion-energia:8000"
+          - name: WATER_SERVICE_URL
+            value: "http://gestion-agua:8000"
+          - name: WASTE_SERVICE_URL
+            value: "http://gestion-residuos:8000"
+          - name: SECURITY_SERVICE_URL
+            value: "http://seguridad-vigilancia:8000"
+          - name: USERS_SERVICE_URL
+            value: "http://gestion-usuarios:8000"
+          - name: PROMETHEUS_URL
+            value: "http://prometheus-service:9090"
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ms-gateway
+  spec:
+    type: NodePort
+    selector:
+      app: ms-gateway
+    ports:
+      - port: 8000
+        targetPort: 8000
+        nodePort: 30007
