@@ -8,17 +8,20 @@ import json
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
-from typing import Optional
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, create_engine
-from sqlalchemy.orm import sessionmaker, Session, declarative_base
+from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from jose import JWTError, jwt
-from pydantic import BaseModel
 
-SECRET_KEY = os.getenv("SECRET_KEY", "supersecreto_gratis")
+from .models import Base, User, Team, SessionLocal, engine
+from .schemas import ClubVerify, UserUpdate, RecoverRequest, RecoverConfirm
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("FATAL: SECRET_KEY env var not found")
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
@@ -51,71 +54,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-engine = create_engine(DATABASE_URL.replace("+asyncpg", ""))
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
-
-
-class Team(Base):
-    __tablename__ = "teams"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True)
-    description = Column(String)
-
-
-class User(Base):
-    __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    name = Column(String)
-    last_name = Column(String)
-    profile_pic_url = Column(String, nullable=True)
-    role = Column(String, default="CITIZEN")
-
-    team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
-    last_team_change = Column(DateTime, default=datetime.utcnow)
-
-    is_2fa_enabled = Column(Boolean, default=False)
-    two_factor_secret = Column(String, nullable=True)
-    preferred_2fa_method = Column(String, default="APP")
-
-    email_verification_code = Column(String, nullable=True)
-    email_code_expires_at = Column(DateTime, nullable=True)
-    last_code_sent_at = Column(DateTime, nullable=True)
-
-    is_verified = Column(Boolean, default=False)
-    verification_date = Column(DateTime, nullable=True)
-
-    club_password = Column(String, nullable=True)
-
-
 Base.metadata.create_all(bind=engine)
-
-
-class ClubVerify(BaseModel):
-    password: str
-
-
-class UserUpdate(BaseModel):
-    username: Optional[str] = None
-    password: Optional[str] = None
-
-
-class RecoverRequest(BaseModel):
-    email: str
-
-
-class RecoverConfirm(BaseModel):
-    email: str
-    code: str
-    new_password: str
-
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 def init_teams():
     db = SessionLocal()
@@ -136,7 +85,6 @@ def init_teams():
     finally:
         db.close()
 
-
 def init_admin():
     db = SessionLocal()
     try:
@@ -155,31 +103,20 @@ def init_admin():
             )
             db.add(admin_user)
             db.commit()
-            print(f"ADMIN CREADO: {admin_email} / admin123")
+            print(f"ADMIN CREADO: {admin_email}")
     except Exception as e:
         print(f"Error creando admin: {e}")
     finally:
         db.close()
 
-
 init_teams()
 init_admin()
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 
 def create_access_token(data: dict):
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
@@ -191,7 +128,6 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     user = db.query(User).filter(User.email == email).first()
     if not user: raise HTTPException(status_code=401)
     return user
-
 
 def send_email(to_email: str, subject: str, body: str):
     if not MAIL_USERNAME or not MAIL_PASSWORD:
@@ -214,7 +150,6 @@ def send_email(to_email: str, subject: str, body: str):
     except Exception as e:
         logger.error(f"Fallo al enviar email: {e}")
 
-
 def send_verification_email(to_email: str, code: str):
     body = f"""
     <!DOCTYPE html>
@@ -234,7 +169,6 @@ def send_verification_email(to_email: str, code: str):
     """
     send_email(to_email, "Codigo de Verificacion - Wakanda OS", body)
 
-
 def send_password_recovery_email(to_email: str, code: str):
     body = f"""
     <!DOCTYPE html>
@@ -253,7 +187,6 @@ def send_password_recovery_email(to_email: str, code: str):
     </html>
     """
     send_email(to_email, "Recuperacion de Acceso - Wakanda OS", body)
-
 
 def send_account_verified_email(to_email: str, club_password: str):
     body = f"""
@@ -277,7 +210,6 @@ def send_account_verified_email(to_email: str, club_password: str):
     """
     send_email(to_email, "Bienvenido al Club VIP Wakanda", body)
 
-
 def send_team_change_email(to_email: str, team_name: str, club_password: str):
     body = f"""
     <!DOCTYPE html>
@@ -295,7 +227,6 @@ def send_team_change_email(to_email: str, team_name: str, club_password: str):
     </html>
     """
     send_email(to_email, f"Nuevo Equipo: {team_name}", body)
-
 
 @app.post("/register")
 def register(
@@ -340,7 +271,6 @@ def register(
 
     return {"msg": "Usuario creado. Verifica tu cuenta con el código enviado al correo."}
 
-
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == form_data.username).first()
@@ -354,7 +284,6 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
     access_token = create_access_token({"sub": user.email, "role": user.role})
     return {"access_token": access_token, "token_type": "bearer", "status": "LOGIN_SUCCESS"}
-
 
 @app.post("/verify-account")
 def verify_account(email: str = Form(...), code: str = Form(...), db: Session = Depends(get_db)):
@@ -378,7 +307,6 @@ def verify_account(email: str = Form(...), code: str = Form(...), db: Session = 
     access_token = create_access_token({"sub": user.email, "role": user.role})
     return {"access_token": access_token, "token_type": "bearer", "msg": "Cuenta verificada"}
 
-
 @app.post("/resend-code")
 def resend_code(email: str = Form(...), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == email).first()
@@ -396,7 +324,6 @@ def resend_code(email: str = Form(...), db: Session = Depends(get_db)):
     send_verification_email(user.email, new_code)
     return {"msg": "Nuevo código enviado"}
 
-
 @app.post("/clubs/verify")
 def verify_club(data: ClubVerify, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user.club_password or user.club_password != data.password:
@@ -409,7 +336,6 @@ def verify_club(data: ClubVerify, user: User = Depends(get_current_user), db: Se
 
     view = team_map.get(user.team_id)
     return {"status": "ok", "view": view}
-
 
 @app.post("/me/avatar")
 async def upload_avatar(file: UploadFile = File(...), user: User = Depends(get_current_user),
@@ -458,7 +384,6 @@ async def upload_avatar(file: UploadFile = File(...), user: User = Depends(get_c
 
     return {"url": url}
 
-
 @app.post("/me/team")
 def change_team(team_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if user.last_team_change:
@@ -477,18 +402,15 @@ def change_team(team_id: int, user: User = Depends(get_current_user), db: Sessio
 
     return {"message": "Equipo cambiado"}
 
-
 @app.get("/me")
 def read_users_me(user: User = Depends(get_current_user)):
     return user
-
 
 @app.get("/users")
 def get_all_users(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if user.role != "ADMIN":
         raise HTTPException(status_code=403, detail="Requiere privilegios de administrador")
     return db.query(User).all()
-
 
 @app.put("/users/{user_id}")
 def update_user(user_id: int, user_data: UserUpdate, db: Session = Depends(get_db)):
@@ -505,7 +427,6 @@ def update_user(user_id: int, user_data: UserUpdate, db: Session = Depends(get_d
     db.commit()
     return {"message": "Usuario actualizado correctamente"}
 
-
 @app.post("/recover/request")
 def request_password_recovery(data: RecoverRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == data.email).first()
@@ -519,7 +440,6 @@ def request_password_recovery(data: RecoverRequest, db: Session = Depends(get_db
 
     send_password_recovery_email(data.email, recovery_code)
     return {"message": "Código de recuperación enviado."}
-
 
 @app.post("/recover/confirm")
 def confirm_password_recovery(data: RecoverConfirm, db: Session = Depends(get_db)):
