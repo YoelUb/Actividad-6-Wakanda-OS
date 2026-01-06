@@ -437,17 +437,10 @@ def get_all_users(user: User = Depends(get_current_user), db: Session = Depends(
 
 
 @app.put("/users/{user_id}")
-def update_user(
-        user_id: int,
-        user_data: UserUpdate,
-        db: Session = Depends(get_db),
-        current_user: User = Depends(get_current_user)
-):
+def update_user(user_id: int, user_data: UserUpdate, db: Session = Depends(get_db),
+                current_user: User = Depends(get_current_user)):
     if current_user.id != user_id:
-        raise HTTPException(
-            status_code=403,
-            detail="⛔ Prohibido: Solo puedes modificar tu propio perfil."
-        )
+        raise HTTPException(status_code=403, detail="⛔ Prohibido: Solo puedes modificar tu propio perfil.")
 
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
@@ -457,14 +450,8 @@ def update_user(
         user.email = user_data.username
 
     if user_data.password:
-        if len(user_data.password) < 8:
-            raise HTTPException(400, "La contraseña debe tener al menos 8 caracteres")
-        if not re.search(r"[A-Z]", user_data.password):
-            raise HTTPException(400, "La contraseña debe tener al menos una mayúscula")
-        if not re.search(r"\d", user_data.password):
-            raise HTTPException(400, "La contraseña debe tener al menos un número")
-        if not re.search(r"[!@#$%^&*.,]", user_data.password):
-            raise HTTPException(400, "La contraseña debe tener al menos un carácter especial")
+        if not re.match(r"^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*.,]).{8,}$", user_data.password):
+            raise HTTPException(400, "La contraseña debe tener 8+ caracteres, mayúscula, número y especial")
 
         if pwd_context.verify(user_data.password, user.hashed_password):
             raise HTTPException(400, "La nueva contraseña no puede ser igual a la anterior")

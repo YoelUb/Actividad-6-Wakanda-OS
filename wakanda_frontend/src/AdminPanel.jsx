@@ -100,9 +100,9 @@ export default function AdminPanel({ onExit }) {
         return;
     }
 
-    const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*.,]).{8,}$/;
     if (editForm.password && !passwordRegex.test(editForm.password)) {
-        alert("❌ SEGURIDAD DÉBIL: La contraseña establecida por el administrador debe tener al menos 8 caracteres, una mayúscula y un número.");
+        alert("❌ SEGURIDAD DÉBIL: La contraseña debe tener al menos 8 caracteres, una mayúscula, un número y un carácter especial (!@#$%^&*.,).");
         return;
     }
 
@@ -114,8 +114,8 @@ export default function AdminPanel({ onExit }) {
       setEditingUser(null);
       fetchData();
     } catch (error) {
-      alert("❌ Error al actualizar usuario");
-      console.error(error);
+      const errorMsg = error.response?.data?.detail || "Error al actualizar usuario";
+      alert(`❌ ${errorMsg}`);
     }
   };
 
