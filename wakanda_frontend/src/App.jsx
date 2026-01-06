@@ -151,14 +151,26 @@ function ServiceCard({ title, endpoint, icon, theme = 'default' }) {
 }
 
 function App() {
-    const [view, setView] = useState('login');
     const [token, setToken] = useState(sessionStorage.getItem('wakanda_token'));
+
+    const [view, setView] = useState(() => {
+        const savedView = localStorage.getItem('wakanda_last_view');
+        return (token && savedView) ? savedView : 'login';
+    });
+
     const [activeServices] = useState(6);
     const [secretCode, setSecretCode] = useState('');
     const [currentUser, setCurrentUser] = useState(null);
 
+    useEffect(() => {
+        if (view !== 'login' && view !== 'register') {
+            localStorage.setItem('wakanda_last_view', view);
+        }
+    }, [view]);
+
     const handleLogout = () => {
         sessionStorage.removeItem('wakanda_token');
+        localStorage.removeItem('wakanda_last_view');
         setToken(null);
         setView('login');
         setCurrentUser(null);
@@ -166,14 +178,10 @@ function App() {
 
     useEffect(() => {
         if (token) {
-            setView('dashboard');
-        } else {
-            setView('login');
-        }
-    }, [token]);
-
-    useEffect(() => {
-        if (token && view === 'dashboard') {
+            if (view === 'login') {
+                const savedView = localStorage.getItem('wakanda_last_view');
+                setView(savedView || 'dashboard');
+            }
             axios.get(`${USERS_API}/me`, {
                 headers: { Authorization: `Bearer ${token}` }
             })
@@ -183,8 +191,10 @@ function App() {
                 .catch(() => {
                     handleLogout();
                 });
+        } else if (view !== 'register') {
+            setView('login');
         }
-    }, [token, view]);
+    }, [token]);
 
     const handleLoginSuccess = () => {
         const accessToken = sessionStorage.getItem('wakanda_token');
@@ -229,12 +239,12 @@ function App() {
     if (view === 'profile') return <UserProfile token={token} onLogout={handleLogout} onBackToHome={() => setView('dashboard')} />;
 
     if (view === 'admin') {
-        if (currentUser?.role !== 'ADMIN') {
-             if (currentUser && currentUser.role !== 'ADMIN') {
-                 setView('dashboard');
-                 return null;
-             }
+        if (currentUser && currentUser.role !== 'ADMIN') {
+             setView('dashboard');
+             return null;
         }
+        if (!currentUser) return <div className="loading-screen">Verificando credenciales...</div>;
+
         return <AdminPanel onExit={() => setView('dashboard')} />;
     }
 
