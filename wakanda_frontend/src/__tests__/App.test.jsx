@@ -5,11 +5,39 @@ import '@testing-library/jest-dom';
 
 jest.mock('axios');
 
+const localStorageMock = (function () {
+    let store = {};
+    return {
+        getItem: (key) => store[key] || null,
+        setItem: (key, value) => { store[key] = value.toString(); },
+        removeItem: (key) => { delete store[key]; },
+        clear: () => { store = {}; },
+    };
+})();
+
+Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+
+const sessionStorageMock = (function () {
+    let store = {};
+    return {
+        getItem: (key) => store[key] || null,
+        setItem: (key, value) => { store[key] = value.toString(); },
+        removeItem: (key) => { delete store[key]; },
+        clear: () => { store = {}; },
+    };
+})();
+
+Object.defineProperty(window, 'sessionStorage', { value: sessionStorageMock });
+
 describe('Wakanda OS Frontend Tests', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        sessionStorage.setItem('wakanda_token', 'valid-test-token');
+        localStorageMock.clear();
+        sessionStorageMock.clear();
+
+        localStorageMock.setItem('wakanda_intro_seen', 'true');
+        sessionStorageMock.setItem('wakanda_token', 'valid-test-token');
 
         axios.get.mockResolvedValue({ data: {} });
         axios.post.mockResolvedValue({ data: {} });
@@ -29,13 +57,14 @@ describe('Wakanda OS Frontend Tests', () => {
     });
 
     test('Redirects to Login if no token is present', async () => {
-        sessionStorage.removeItem('wakanda_token');
+        sessionStorageMock.removeItem('wakanda_token');
 
         await act(async () => {
             render(<App />);
         });
 
         expect(screen.queryByText(/Sistema Operativo Urbano/i)).not.toBeInTheDocument();
+        expect(screen.getByText(/ACCESO RESTRINGIDO/i)).toBeInTheDocument();
     });
 
     test('ServiceCard displays initial loading state', async () => {

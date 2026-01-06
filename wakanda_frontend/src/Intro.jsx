@@ -34,9 +34,6 @@ export default function Intro({ onFinish }) {
             />
 
             <div className="intro-controls">
-                <button className="intro-btn sound-btn" onClick={toggleSound}>
-                    {muted ? 'Activar sonido' : 'Silenciar'}
-                </button>
                 <button className="intro-btn skip-btn" onClick={onFinish}>
                     Saltar intro
                 </button>
