@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import Intro from './Intro';
 import SecretClub from './SecretClub';
 import PokemonClub from './PokemonClub';
 import HogwartsClub from './HogwartsClub';
@@ -153,6 +154,19 @@ function ServiceCard({ title, endpoint, icon, theme = 'default' }) {
 function App() {
     const [token, setToken] = useState(sessionStorage.getItem('wakanda_token'));
 
+    const [showIntro, setShowIntro] = useState(() => {
+        return localStorage.getItem('wakanda_intro_seen') !== 'true';
+    });
+
+    const handleIntroFinish = () => {
+        localStorage.setItem('wakanda_intro_seen', 'true');
+        setShowIntro(false);
+    };
+
+    const handleReplayIntro = () => {
+        setShowIntro(true);
+    };
+
     const [view, setView] = useState(() => {
         const savedView = localStorage.getItem('wakanda_last_view');
         return (token && savedView) ? savedView : 'login';
@@ -219,6 +233,10 @@ function App() {
         }
     };
 
+    if (showIntro) {
+        return <Intro onFinish={handleIntroFinish} />;
+    }
+
     if (!token && view === 'register') {
         return <Register switchToLogin={() => setView('login')} />;
     }
@@ -228,6 +246,7 @@ function App() {
             <Login
                 onLogin={handleLoginSuccess}
                 onNavigateToRegister={() => setView('register')}
+                onReplayIntro={handleReplayIntro}
             />
         );
     }

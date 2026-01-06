@@ -4,7 +4,7 @@ import './Login.css';
 
 const GATEWAY_URL = 'http://localhost:30007';
 
-export default function Login({ onLogin, onNavigateToRegister }) {
+export default function Login({ onLogin, onNavigateToRegister, onReplayIntro }) {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -165,14 +165,31 @@ export default function Login({ onLogin, onNavigateToRegister }) {
           SOLICITAR CIUDADANÍA
         </button>
 
-        <button
-          type="button"
-          className="vibranium-btn secondary"
-          style={{marginTop: '10px', fontSize: '0.8rem', border: 'none', color: 'var(--neon-purple)'}}
-          onClick={() => setShowRecover(true)}
-        >
-          ¿Olvidaste la contraseña?
-        </button>
+        <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '15px'}}>
+            <button
+              type="button"
+              className="vibranium-btn secondary"
+              style={{fontSize: '0.8rem', border: 'none', color: 'var(--neon-purple)', padding: '0'}}
+              onClick={() => setShowRecover(true)}
+            >
+              ¿Olvidaste la contraseña?
+            </button>
+
+            <button
+                type="button"
+                className="vibranium-btn secondary"
+                onClick={onReplayIntro}
+                style={{
+                    background: 'transparent',
+                    border: '1px dashed var(--neon-purple)',
+                    color: 'var(--neon-purple)',
+                    padding: '5px 10px',
+                    fontSize: '0.8rem'
+                }}
+            >
+                🎬 Ver Intro
+            </button>
+        </div>
       </div>
 
       {showRecover && (
@@ -296,7 +313,7 @@ export default function Login({ onLogin, onNavigateToRegister }) {
                   style={{fontSize: '0.8rem'}}
                   onClick={handleResendCode}
                 >
-                  REENVIAR CÓDIGO
+                  Reenviar código
                 </button>
                 <button
                   type="button"
@@ -308,7 +325,7 @@ export default function Login({ onLogin, onNavigateToRegister }) {
                     setVerifyCode('');
                   }}
                 >
-                  CANCELAR
+                  Cancelar
                 </button>
             </div>
           </div>
