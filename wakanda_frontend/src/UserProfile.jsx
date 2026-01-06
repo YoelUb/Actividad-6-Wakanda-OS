@@ -28,7 +28,6 @@ export default function UserProfile({ token, onLogout, onBackToHome }) {
 
     const interval = setInterval(() => {
       const lastChange = new Date(user.last_team_change);
-      // Añadimos 24h a la fecha UTC recibida
       const nextAvailable = new Date(lastChange.getTime() + 86400000);
       const now = new Date();
 
@@ -89,7 +88,7 @@ export default function UserProfile({ token, onLogout, onBackToHome }) {
 
     try {
       setIsUploading(true);
-      await axios.post(`${USERS_API}/me/avatar`, formData, {
+      const res = await axios.post(`${USERS_API}/me/avatar`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
@@ -98,6 +97,14 @@ export default function UserProfile({ token, onLogout, onBackToHome }) {
       setMsg("✅ Avatar actualizado correctamente");
 
       setImageHash(Date.now());
+
+      if (res.data && res.data.url) {
+        setUser(prev => ({
+          ...prev,
+          profile_pic_url: res.data.url
+        }));
+      }
+
       await fetchUser();
 
     } catch (err) {
