@@ -20,7 +20,7 @@ export default function Login({ onLogin, onNavigateToRegister, onReplayIntro }) 
   const [verifyCode, setVerifyCode] = useState('');
   const [verifyMsg, setVerifyMsg] = useState({ type: '', text: '' });
 
-  const passwordRegex = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/;
+  const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*.,]).{8,}$/;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -97,7 +97,7 @@ export default function Login({ onLogin, onNavigateToRegister, onReplayIntro }) 
     setRecoverMsg({ type: '', text: '' });
 
     if (!passwordRegex.test(recoverData.new_password)) {
-        setRecoverMsg({ type: 'error', text: 'La contraseña debe tener al menos 8 caracteres, 1 mayúscula y 1 número.' });
+        setRecoverMsg({ type: 'error', text: 'La contraseña debe tener al menos 8 caracteres, 1 mayúscula, 1 número y 1 carácter especial (!@#$%^&*.,).' });
         return;
     }
 
@@ -115,7 +115,8 @@ export default function Login({ onLogin, onNavigateToRegister, onReplayIntro }) 
         setRecoverData({ email: '', code: '', new_password: '' });
       }, 2500);
     } catch (err) {
-      setRecoverMsg({ type: 'error', text: 'Código incorrecto o expirado.' });
+      console.error(err);
+      setRecoverMsg({ type: 'error', text: err.response?.data?.detail || 'Error al restablecer contraseña.' });
     }
   };
 
@@ -245,7 +246,7 @@ export default function Login({ onLogin, onNavigateToRegister, onReplayIntro }) 
                     </button>
                 </div>
                 <p style={{fontSize: '0.75rem', color: '#aaa', textAlign: 'left', marginTop: '-10px', marginBottom: '15px'}}>
-                    * Mínimo 8 caracteres, 1 mayúscula y 1 número.
+                    * Mínimo 8 caracteres, 1 mayúscula, 1 número y 1 carácter especial.
                 </p>
 
                 <button type="submit" className="vibranium-btn">CAMBIAR CONTRASEÑA</button>

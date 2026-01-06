@@ -119,7 +119,7 @@ export default function Register({ switchToLogin }) {
             <div className="form-group">
               <input
                 type="text"
-                placeholder="Nombre (Solo letras) *"
+                placeholder="Nombre"
                 className={`register-input ${touched.name && errors.name ? 'input-error' : ''}`}
                 value={formData.name}
                 onChange={(e) => handleNameChange(e, 'name')}
@@ -134,7 +134,7 @@ export default function Register({ switchToLogin }) {
             <div className="form-group">
               <input
                 type="text"
-                placeholder="Apellidos (Solo letras) *"
+                placeholder="Apellidos"
                 className={`register-input ${touched.lastName && errors.lastName ? 'input-error' : ''}`}
                 value={formData.lastName}
                 onChange={(e) => handleNameChange(e, 'lastName')}
