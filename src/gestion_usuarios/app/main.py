@@ -1,39 +1,55 @@
 import os
-import httpx
-import random
 import logging
-from datetime import datetime, timezone, timedelta
-from kubernetes import client, config
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File
-from .resilience import fetch_from_service, post_to_service
+import boto3
+import smtplib
+import random
+import re
+import json
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from datetime import datetime, timedelta
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+from passlib.context import CryptContext
+from jose import JWTError, jwt
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[logging.StreamHandler()]
+try:
+    from app.models import Base, User, Team, SessionLocal, engine
+    from app.schemas import ClubVerify, UserUpdate, RecoverRequest, RecoverConfirm
+except ImportError:
+    from .models import Base, User, Team, SessionLocal, engine
+    from .schemas import ClubVerify, UserUpdate, RecoverRequest, RecoverConfirm
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    SECRET_KEY = "supersecreto_gratis"
+
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+
+MAIL_USERNAME = os.getenv("MAIL_USERNAME")
+MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
+MAIL_FROM = os.getenv("MAIL_FROM", MAIL_USERNAME)
+MAIL_PORT = int(os.getenv("MAIL_PORT", 587))
+MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.gmail.com")
+
+MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "http://minio:9000")
+MINIO_ACCESS = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+MINIO_SECRET = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+
+s3_client = boto3.client(
+    's3',
+    endpoint_url=MINIO_ENDPOINT,
+    aws_access_key_id=MINIO_ACCESS,
+    aws_secret_access_key=MINIO_SECRET
 )
-logger = logging.getLogger("WakandaGateway")
 
-app = FastAPI(title="Wakanda API Gateway")
+app = FastAPI(title="Gestión de Usuarios")
+logger = logging.getLogger("uvicorn")
 
-TRAFFIC_SERVICE_URL = os.getenv("TRAFFIC_SERVICE_URL", "http://gestion_trafico:8000")
-ENERGY_SERVICE_URL = os.getenv("ENERGY_SERVICE_URL", "http://gestion_energia:8000")
-WATER_SERVICE_URL = os.getenv("WATER_SERVICE_URL", "http://gestion_agua:8000")
-WASTE_SERVICE_URL = os.getenv("WASTE_SERVICE_URL", "http://gestion_residuos:8000")
-SECURITY_SERVICE_URL = os.getenv("SECURITY_SERVICE_URL", "http://seguridad_vigilancia:8000")
-USERS_SERVICE_URL = os.getenv("USERS_SERVICE_URL", "http://gestion-usuarios:8000")
-PROMETHEUS_URL = os.getenv("PROMETHEUS_URL", "http://prometheus:9090")
-
-SECRET_CLUB_API_URL = "https://rickandmortyapi.com/api/character"
-POKEMON_API_URL = "https://pokeapi.co/api/v2/pokemon"
-HARRY_POTTER_API_URL = "https://hp-api.onrender.com/api/characters"
-
-restarting_services = {}
-RESTART_DURATION = 10
-
-origins = ["http://localhost:30000", "http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:30000", "*"]
-
+origins = ["http://localhost:3000", "http://localhost:5173", "*"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -42,485 +58,453 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+Base.metadata.create_all(bind=engine)
 
-def check_restart_mode(service_name: str):
-    if service_name in restarting_services:
-        start_time = restarting_services[service_name]
-        if datetime.now() - start_time < timedelta(seconds=RESTART_DURATION):
-            return True
-        else:
-            del restarting_services[service_name]
-    return False
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
-@app.get("/")
-async def root():
-    return {"message": "Wakanda OS Gateway Online", "status": "OK"}
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
-@app.get("/traffic/status")
-async def proxy_traffic():
-    if check_restart_mode("ms-trafico"):
-        return {
-            "status": "⚠️ REINICIANDO SISTEMA",
-            "congestion_level": "CALIBRANDO SENSORES...",
-            "avg_speed": "---",
-            "active_drones": 0,
-            "incidents_reported": 0,
-            "db_connection": "MAINTENANCE"
-        }
-    async with httpx.AsyncClient() as client:
-        return (await fetch_from_service(f"{TRAFFIC_SERVICE_URL}/traffic/status", client)).json()
+def init_teams():
+    db = SessionLocal()
+    try:
+        teams_data = [
+            {"id": 1, "name": "Rick & Morty Club", "description": "Exploradores del multiverso"},
+            {"id": 2, "name": "Pokémon League", "description": "Entrenadores y maestros"},
+            {"id": 3, "name": "Hogwarts School", "description": "Magia y hechicería"}
+        ]
+        for t_data in teams_data:
+            exists = db.query(Team).filter(Team.id == t_data["id"]).first()
+            if not exists:
+                new_team = Team(id=t_data["id"], name=t_data["name"], description=t_data["description"])
+                db.add(new_team)
+        db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        db.close()
 
 
-@app.get("/energy/grid")
-async def proxy_energy():
-    if check_restart_mode("ms-energia"):
-        return {
-            "status": "⚡ REINICIANDO RED",
-            "voltage_v": 0,
-            "frequency_hz": 0,
-            "vibranium_core_load": "ESTABILIZANDO...",
-            "active_turbines": 0,
-            "db_connection": "MAINTENANCE"
-        }
-    async with httpx.AsyncClient() as client:
-        return (await fetch_from_service(f"{ENERGY_SERVICE_URL}/energy/grid", client)).json()
+def init_admin():
+    db = SessionLocal()
+    try:
+        admin_email = "admin@wakanda.es"
+        exists = db.query(User).filter(User.email == admin_email).first()
+        if not exists:
+            admin_user = User(
+                email=admin_email,
+                hashed_password=pwd_context.hash("admin123"),
+                name="T'Challa",
+                last_name="King",
+                role="ADMIN",
+                is_verified=True,
+                team_id=1,
+                club_password="WAKANDA-FOREVER"
+            )
+            db.add(admin_user)
+            db.commit()
+            print(f"ADMIN CREADO: {admin_email}")
+    except Exception as e:
+        print(f"Error creando admin: {e}")
+    finally:
+        db.close()
 
 
-@app.get("/water/pressure")
-async def proxy_water():
-    if check_restart_mode("ms-agua"):
-        return {
-            "status": "💧 PURGANDO TUBERÍAS",
-            "pressure_psi": 0,
-            "ph_level": 0,
-            "purity_level": "ANALIZANDO...",
-            "reserve_level": "---",
-            "db_connection": "MAINTENANCE"
-        }
-    async with httpx.AsyncClient() as client:
-        return (await fetch_from_service(f"{WATER_SERVICE_URL}/water/pressure", client)).json()
+init_teams()
+init_admin()
 
 
-@app.get("/waste/status")
-async def proxy_waste():
-    if check_restart_mode("ms-residuos"):
-        return {
-            "status": "♻️ REINICIANDO COMPACTADORES",
-            "trucks_active": 0,
-            "recycling_centers_online": 0,
-            "avg_bin_fill_level": "---",
-            "incinerator_temp": "ENFRIANDO...",
-            "db_connection": "MAINTENANCE"
-        }
-    async with httpx.AsyncClient() as client:
-        return (await fetch_from_service(f"{WASTE_SERVICE_URL}/waste/status", client)).json()
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-@app.get("/security/alerts")
-async def proxy_security():
-    if check_restart_mode("ms-seguridad"):
-        return {
-            "status": "🛡️ REINICIANDO PROTOCOLOS",
-            "alert_level": "NEUTRAL",
-            "border_integrity": "ESCANEANDO...",
-            "detected_threats": 0,
-            "patrol_drones": 0,
-            "db_connection": "MAINTENANCE"
-        }
-    async with httpx.AsyncClient() as client:
-        return (await fetch_from_service(f"{SECURITY_SERVICE_URL}/security/alerts", client)).json()
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None: raise HTTPException(status_code=401)
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Token inválido")
+    user = db.query(User).filter(User.email == email).first()
+    if not user: raise HTTPException(status_code=401)
+    return user
 
 
-@app.get("/secret-club/roster")
-async def get_rick_roster():
-    async with httpx.AsyncClient() as client:
-        resp = await fetch_from_service(SECRET_CLUB_API_URL, client)
-        return resp.json()
+def send_email(to_email: str, subject: str, body: str):
+    if not MAIL_USERNAME or not MAIL_PASSWORD:
+        return
+
+    msg = MIMEMultipart()
+    msg['From'] = MAIL_FROM
+    msg['To'] = to_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'html'))
+
+    try:
+        server = smtplib.SMTP(MAIL_SERVER, MAIL_PORT)
+        server.starttls()
+        server.login(MAIL_USERNAME, MAIL_PASSWORD)
+        text = msg.as_string()
+        server.sendmail(MAIL_FROM, to_email, text)
+        server.quit()
+    except Exception as e:
+        logger.error(f"Fallo al enviar email: {e}")
 
 
-@app.get("/secret-club/{id}")
-async def get_rick_member(id: int):
-    async with httpx.AsyncClient() as client:
-        resp = await fetch_from_service(f"{SECRET_CLUB_API_URL}/{id}", client)
-        if resp.status_code != 200: raise HTTPException(404, "Morty no encontrado")
-        return resp.json()
+def send_verification_email(to_email: str, code: str):
+    body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="UTF-8"></head>
+    <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+            <h2 style="color: #667eea; text-align: center;">🛡️ Verificación Wakanda OS</h2>
+            <p style="text-align: center; color: #555;">Tu código de seguridad es:</p>
+            <div style="background: #f0f4f8; padding: 15px; text-align: center; font-size: 32px; letter-spacing: 5px; font-weight: bold; color: #333; border-radius: 5px; margin: 20px 0;">
+                {code}
+            </div>
+            <p style="text-align: center; color: #888; font-size: 12px;">Válido por 20 minutos. No lo compartas.</p>
+        </div>
+    </body>
+    </html>
+    """
+    send_email(to_email, "Codigo de Verificacion - Wakanda OS", body)
 
 
-@app.get("/pokemon/roster")
-async def get_pokemon_roster():
-    async with httpx.AsyncClient() as client:
-        resp = await fetch_from_service(f"{POKEMON_API_URL}?limit=20", client)
-        return resp.json()
+def send_password_recovery_email(to_email: str, code: str):
+    body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="UTF-8"></head>
+    <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+            <h2 style="color: #ff4757; text-align: center;">🔑 Recuperación de Contraseña</h2>
+            <p style="text-align: center; color: #555;">Usa este código para restablecer tu contraseña:</p>
+            <div style="background: #fff0f1; padding: 15px; text-align: center; font-size: 32px; letter-spacing: 5px; font-weight: bold; color: #ff4757; border-radius: 5px; margin: 20px 0; border: 1px dashed #ff4757;">
+                {code}
+            </div>
+            <p style="text-align: center; color: #888; font-size: 12px;">Si no has solicitado esto, ignora este correo.</p>
+        </div>
+    </body>
+    </html>
+    """
+    send_email(to_email, "Recuperacion de Acceso - Wakanda OS", body)
 
 
-@app.get("/pokemon/{id}")
-async def get_pokemon_detail(id: str):
-    async with httpx.AsyncClient() as client:
-        resp = await fetch_from_service(f"{POKEMON_API_URL}/{id}", client)
-        if resp.status_code != 200: raise HTTPException(404, "Pokémon escapó")
-        data = resp.json()
-        return {
-            "id": data["id"],
-            "name": data["name"],
-            "image": data["sprites"]["other"]["official-artwork"]["front_default"],
-            "types": [t["type"]["name"] for t in data["types"]],
-            "height": data["height"],
-            "weight": data["weight"],
-            "abilities": [a["ability"]["name"] for a in data["abilities"]]
-        }
+def send_account_verified_email(to_email: str, club_password: str):
+    body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="UTF-8"></head>
+    <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; padding: 20px; color: white;">
+        <div style="max-width: 600px; margin: 0 auto; background: #2d2d2d; padding: 30px; border-radius: 15px; border: 2px solid #00eaff;">
+            <h2 style="color: #00eaff; text-align: center; text-transform: uppercase;">🚀 ¡Acceso Concedido!</h2>
+            <p style="text-align: center;">Bienvenido a la ciudadanía oficial de Wakanda.</p>
+            <div style="margin: 30px 0; text-align: center;">
+                <p style="margin-bottom: 10px; color: #bd00ff;">TU CONTRASEÑA VIP DE CLUB:</p>
+                <div style="font-family: monospace; font-size: 28px; background: rgba(189,0,255,0.1); padding: 15px; border: 1px dashed #bd00ff; border-radius: 8px;">
+                    {club_password}
+                </div>
+            </div>
+            <p style="text-align: center; color: #aaa; font-size: 14px;">Usa esta contraseña para acceder a los paneles secretos.</p>
+        </div>
+    </body>
+    </html>
+    """
+    send_email(to_email, "Bienvenido al Club VIP Wakanda", body)
 
 
-@app.get("/hogwarts/roster")
-async def get_hp_roster():
-    async with httpx.AsyncClient() as client:
-        resp = await fetch_from_service(HARRY_POTTER_API_URL, client)
-        all_chars = resp.json()
-        return all_chars[:24]
-
-
-@app.get("/hogwarts/{id}")
-async def get_hp_detail(id: str):
-    async with httpx.AsyncClient() as client:
-        resp = await fetch_from_service(HARRY_POTTER_API_URL, client)
-        all_chars = resp.json()
-        try:
-            idx = int(id) - 1
-            if 0 <= idx < len(all_chars):
-                return all_chars[idx]
-        except:
-            pass
-        raise HTTPException(404, "Muggle no encontrado")
+def send_team_change_email(to_email: str, team_name: str, club_password: str):
+    body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="UTF-8"></head>
+    <body style="font-family: Arial, sans-serif; background-color: #fff; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: #fff; border: 1px solid #eee; padding: 30px; border-radius: 10px;">
+            <h2 style="color: #333; text-align: center;">🔄 Cambio de Equipo Confirmado</h2>
+            <p style="text-align: center; font-size: 18px;">Ahora perteneces a: <strong>{team_name}</strong></p>
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="text-align: center; color: #555;">Te recordamos tu contraseña de acceso al Club:</p>
+            <h3 style="text-align: center; color: #d63384; font-family: monospace; font-size: 24px;">{club_password}</h3>
+        </div>
+    </body>
+    </html>
+    """
+    send_email(to_email, f"Nuevo Equipo: {team_name}", body)
 
 
 @app.post("/register")
-async def proxy_register(request: Request):
-    form_data = await request.form()
-    data = dict(form_data)
-    async with httpx.AsyncClient() as client:
-        resp = await post_to_service(f"{USERS_SERVICE_URL}/register", data=data, client=client)
-        if resp.status_code >= 400: raise HTTPException(status_code=resp.status_code,
-                                                        detail=resp.json().get('detail', 'Error'))
-        return resp.json()
+def register(
+        email: str = Form(...),
+        password: str = Form(...),
+        name: str = Form(...),
+        last_name: str = Form(...),
+        team_id: int = Form(None),
+        db: Session = Depends(get_db)
+):
+    if db.query(User).filter(User.email == email).first():
+        raise HTTPException(400, "Email ya registrado")
+
+    if not re.match(r"^[a-zA-ZÀ-ÿ\s]+$", name) or not re.match(r"^[a-zA-ZÀ-ÿ\s]+$", last_name):
+        raise HTTPException(400, "Nombre y Apellidos solo pueden contener letras")
+
+    if team_id:
+        team = db.query(Team).filter(Team.id == team_id).first()
+        if not team:
+            raise HTTPException(400, f"El equipo con ID {team_id} no existe.")
+
+    verification_code = str(random.randint(100000, 999999))
+    club_password = f"WAKANDA-{random.randint(1000, 9999)}-VIP"
+
+    new_user = User(
+        email=email,
+        hashed_password=pwd_context.hash(password),
+        name=name,
+        last_name=last_name,
+        team_id=team_id,
+        is_verified=False,
+        email_verification_code=verification_code,
+        email_code_expires_at=datetime.utcnow() + timedelta(minutes=20),
+        last_code_sent_at=datetime.utcnow(),
+        club_password=club_password,
+        last_team_change=datetime.utcnow() - timedelta(days=1)
+    )
+    db.add(new_user)
+    db.commit()
+
+    send_verification_email(email, verification_code)
+
+    return {"msg": "Usuario creado. Verifica tu cuenta con el código enviado al correo."}
 
 
 @app.post("/login")
-async def proxy_login(request: Request):
-    form_data = await request.form()
-    data = dict(form_data)
-    async with httpx.AsyncClient() as client:
-        resp = await post_to_service(f"{USERS_SERVICE_URL}/login", data=data, client=client)
-        if resp.status_code >= 400: raise HTTPException(status_code=resp.status_code,
-                                                        detail=resp.json().get('detail', 'Error'))
-        return resp.json()
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == form_data.username).first()
+    if not user or not pwd_context.verify(form_data.password, user.hashed_password):
+        raise HTTPException(401, "Credenciales incorrectas")
+
+    if not user.is_verified:
+        if user.email_code_expires_at and datetime.utcnow() > user.email_code_expires_at:
+            return {"status": "VERIFICATION_REQUIRED", "msg": "Código expirado. Solicita uno nuevo."}
+        return {"status": "VERIFICATION_REQUIRED", "msg": "Cuenta no verificada. Revisa tu correo."}
+
+    access_token = create_access_token({"sub": user.email, "role": user.role})
+    return {"access_token": access_token, "token_type": "bearer", "status": "LOGIN_SUCCESS"}
 
 
 @app.post("/verify-account")
-async def proxy_verify_account(request: Request):
-    form_data = await request.form()
-    data = dict(form_data)
-    async with httpx.AsyncClient() as client:
-        resp = await post_to_service(f"{USERS_SERVICE_URL}/verify-account", data=data, client=client)
-        if resp.status_code >= 400: raise HTTPException(status_code=resp.status_code,
-                                                        detail=resp.json().get('detail', 'Error'))
-        return resp.json()
+def verify_account(email: str = Form(...), code: str = Form(...), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == email).first()
+    if not user: raise HTTPException(404, "Usuario no encontrado")
+
+    if user.is_verified: return {"msg": "La cuenta ya estaba verificada"}
+
+    if user.email_verification_code != code: raise HTTPException(400, "Código incorrecto")
+
+    if user.email_code_expires_at and datetime.utcnow() > user.email_code_expires_at:
+        raise HTTPException(400, "El código ha expirado")
+
+    user.is_verified = True
+    user.email_verification_code = None
+    user.verification_date = datetime.utcnow()
+    db.commit()
+
+    send_account_verified_email(user.email, user.club_password)
+
+    access_token = create_access_token({"sub": user.email, "role": user.role})
+    return {"access_token": access_token, "token_type": "bearer", "msg": "Cuenta verificada"}
 
 
 @app.post("/resend-code")
-async def proxy_resend_code(request: Request):
-    form_data = await request.form()
-    data = dict(form_data)
-    async with httpx.AsyncClient() as client:
-        resp = await post_to_service(f"{USERS_SERVICE_URL}/resend-code", data=data, client=client)
-        if resp.status_code >= 400: raise HTTPException(status_code=resp.status_code,
-                                                        detail=resp.json().get('detail', 'Error'))
-        return resp.json()
+def resend_code(email: str = Form(...), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == email).first()
+    if not user: raise HTTPException(404, "Usuario no encontrado")
 
+    if user.last_code_sent_at and datetime.utcnow() < user.last_code_sent_at + timedelta(minutes=15):
+        raise HTTPException(429, "Espera 15 minutos para reenviar.")
 
-@app.get("/me")
-async def proxy_users_me(request: Request):
-    token = request.headers.get("authorization")
-    headers = {"Authorization": token} if token else {}
-    async with httpx.AsyncClient(headers=headers) as client:
-        resp = await client.get(f"{USERS_SERVICE_URL}/me")
-        if resp.status_code >= 400: raise HTTPException(status_code=resp.status_code, detail="No autorizado")
-        return resp.json()
+    new_code = str(random.randint(100000, 999999))
+    user.email_verification_code = new_code
+    user.email_code_expires_at = datetime.utcnow() + timedelta(minutes=20)
+    user.last_code_sent_at = datetime.utcnow()
+    db.commit()
 
-
-@app.get("/users")
-async def proxy_get_all_users(request: Request):
-    token = request.headers.get("authorization")
-    headers = {"Authorization": token} if token else {}
-    async with httpx.AsyncClient(headers=headers) as client:
-        resp = await client.get(f"{USERS_SERVICE_URL}/users")
-        if resp.status_code >= 400:
-            raise HTTPException(status_code=resp.status_code, detail=resp.json().get('detail', 'Error'))
-        return resp.json()
-
-
-@app.put("/users/{user_id}")
-async def proxy_update_user(user_id: int, request: Request):
-    token = request.headers.get("authorization")
-    headers = {"Authorization": token} if token else {}
-    body = await request.json()
-    async with httpx.AsyncClient(headers=headers) as client:
-        resp = await client.put(f"{USERS_SERVICE_URL}/users/{user_id}", json=body)
-        if resp.status_code >= 400:
-            raise HTTPException(status_code=resp.status_code, detail=resp.json().get('detail', 'Error'))
-        return resp.json()
-
-
-@app.post("/recover/request")
-async def proxy_recover_request(request: Request):
-    body = await request.json()
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(f"{USERS_SERVICE_URL}/recover/request", json=body)
-        if resp.status_code >= 400:
-            raise HTTPException(status_code=resp.status_code, detail=resp.json().get('detail', 'Error'))
-        return resp.json()
-
-
-@app.post("/recover/confirm")
-async def proxy_recover_confirm(request: Request):
-    body = await request.json()
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(f"{USERS_SERVICE_URL}/recover/confirm", json=body)
-        if resp.status_code >= 400:
-            raise HTTPException(status_code=resp.status_code, detail=resp.json().get('detail', 'Error'))
-        return resp.json()
+    send_verification_email(user.email, new_code)
+    return {"msg": "Nuevo código enviado"}
 
 
 @app.post("/clubs/verify")
-async def proxy_club_verify(request: Request):
-    token = request.headers.get("authorization")
-    headers = {"Authorization": token} if token else {}
-    body = await request.json()
-    async with httpx.AsyncClient(headers=headers) as client:
-        resp = await client.post(f"{USERS_SERVICE_URL}/clubs/verify", json=body)
-        if resp.status_code >= 400: raise HTTPException(status_code=resp.status_code,
-                                                        detail=resp.json().get('detail', 'Error'))
-        return resp.json()
+def verify_club(data: ClubVerify, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not user.club_password or user.club_password != data.password:
+        raise HTTPException(status_code=401, detail="⛔ Contraseña de Club incorrecta.")
 
+    if not user.team_id:
+        raise HTTPException(status_code=403, detail="⚠️ No tienes un equipo asignado.")
 
-@app.post("/me/team")
-async def proxy_change_team(team_id: int, request: Request):
-    token = request.headers.get("authorization")
-    headers = {"Authorization": token} if token else {}
-    async with httpx.AsyncClient(headers=headers) as client:
-        resp = await client.post(f"{USERS_SERVICE_URL}/me/team", params={"team_id": team_id})
-        if resp.status_code >= 400: raise HTTPException(status_code=resp.status_code,
-                                                        detail=resp.json().get('detail', 'Error'))
-        return resp.json()
+    team_map = {1: "rickmorty", 2: "pokemon", 3: "hogwarts"}
+
+    view = team_map.get(user.team_id)
+    return {"status": "ok", "view": view}
 
 
 @app.post("/me/avatar")
-async def proxy_upload_avatar(request: Request):
-    token = request.headers.get("authorization")
-    headers = {"Authorization": token} if token else {}
-    form = await request.form()
-    file = form.get("file")
-    if not file: raise HTTPException(400, "No file uploaded")
-    files = {"file": (file.filename, await file.read(), file.content_type)}
-    async with httpx.AsyncClient(headers=headers) as client:
-        resp = await client.post(f"{USERS_SERVICE_URL}/me/avatar", files=files)
-        if resp.status_code >= 400: raise HTTPException(status_code=resp.status_code, detail="Error subiendo imagen")
-        return resp.json()
+async def upload_avatar(file: UploadFile = File(...), user: User = Depends(get_current_user),
+                        db: Session = Depends(get_db)):
+    bucket_name = "avatars"
 
-
-@app.post("/admin/restart/{service_name}")
-def restart_service(service_name: str):
     try:
-        logger.info(f"🔄 Activando modo mantenimiento para {service_name}")
-        restarting_services[service_name] = datetime.now()
-
+        s3_client.head_bucket(Bucket=bucket_name)
+    except:
         try:
-            config.load_incluster_config()
-        except:
-            try:
-                config.load_kube_config()
-            except:
-                logger.warning("No se pudo cargar configuración de K8s. Ejecutando en modo simulación local.")
+            s3_client.create_bucket(Bucket=bucket_name)
+        except Exception as e:
+            logger.error(f"Error creando bucket: {e}")
 
-        v1 = client.AppsV1Api()
-
-        # 1. Recuperamos el Deployment actual para ver cuántos reinicios lleva
-        try:
-            current_deploy = v1.read_namespaced_deployment(name=service_name, namespace="default")
-            current_restarts = int(current_deploy.metadata.annotations.get("wakanda.os/restarts", "0")
-                                   if current_deploy.metadata.annotations else "0")
-        except:
-            current_restarts = 0
-
-        new_restart_count = current_restarts + 1
-
-        # 2. Guardamos el nuevo contador en el Deployment (persistencia)
-        # Y actualizamos la fecha en el template del Pod (para forzar el rollout)
-        patch_body = {
-            "metadata": {
-                "annotations": {
-                    "wakanda.os/restarts": str(new_restart_count)
+    try:
+        policy = {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "PublicRead",
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Action": ["s3:GetObject"],
+                    "Resource": [f"arn:aws:s3:::{bucket_name}/*"]
                 }
-            },
-            "spec": {
-                "template": {
-                    "metadata": {
-                        "annotations": {
-                            "kubectl.kubernetes.io/restartedAt": str(datetime.now())
-                        }
-                    }
-                }
-            }
+            ]
         }
-        v1.patch_namespaced_deployment(name=service_name, namespace="default", body=patch_body)
-
-        return {"status": f"Reiniciando servicio {service_name}...", "timestamp": str(datetime.now())}
+        s3_client.put_bucket_policy(Bucket=bucket_name, Policy=json.dumps(policy))
     except Exception as e:
-        logger.error(f"⛔ FALLO AL REINICIAR {service_name}: {str(e)}")
-        return {"status": "Reinicio simulado activado (K8s no disponible)", "error": str(e)}
+        logger.warning(f"No se pudo establecer política pública: {e}")
 
-
-@app.get("/admin/k8s/info")
-def get_k8s_info():
+    file_key = f"{user.id}_{file.filename}"
     try:
-        try:
-            config.load_incluster_config()
-        except:
-            config.load_kube_config()
-
-        core_v1 = client.CoreV1Api()
-        apps_v1 = client.AppsV1Api()
-
-        # 1. Obtenemos el mapa de reinicios manuales de todos los Deployments
-        manual_restarts_map = {}
-        try:
-            deployments = apps_v1.list_namespaced_deployment(namespace="default")
-            for d in deployments.items:
-                val = d.metadata.annotations.get("wakanda.os/restarts", "0") if d.metadata.annotations else "0"
-                manual_restarts_map[d.metadata.name] = int(val)
-        except:
-            pass
-
-        pods = core_v1.list_namespaced_pod("default")
-        pod_list = []
-
-        friendly_names = {
-            "ms-trafico": "Tráfico aéreo",
-            "ms-energia": "Red vibranium",
-            "ms-agua": "Hidroeléctrica",
-            "ms-residuos": "Gestión basura",
-            "ms-seguridad": "Gestión defensa",
-            "ms-usuarios": "Gestión ciudadanos",
-            "ms-gateway": "Proxy",
-            "wakanda-frontend": "Panel de control",
-            "postgres-db": "Base de datos central",
-            "minio": "Base de datos minio",
-            "prometheus": "Sistema monitoreo"
-        }
-
-        for p in pods.items:
-            # Ignorar pods muriendo
-            if p.metadata.deletion_timestamp:
-                continue
-
-            start_time = p.status.start_time
-            age = "Recién nacido"
-
-            if start_time:
-                now = datetime.now(timezone.utc)
-                if start_time.tzinfo:
-                    delta = now - start_time
-                else:
-                    delta = datetime.now() - start_time
-
-                total_seconds = int(delta.total_seconds())
-                hours = total_seconds // 3600
-                minutes = (total_seconds % 3600) // 60
-                age = f"{hours}h {minutes}m"
-
-            raw_name = p.metadata.name
-            clean_name = raw_name
-            deployment_key = raw_name  # Por defecto
-            parts = raw_name.split('-')
-
-            if len(parts) >= 3:
-                potential_name = "-".join(parts[:-2])
-                deployment_key = potential_name  # Clave técnica para buscar el contador
-                if potential_name in friendly_names:
-                    clean_name = friendly_names[potential_name]
-                else:
-                    clean_name = potential_name
-            elif len(parts) == 2 and parts[0] == "minio":
-                clean_name = friendly_names.get("minio", "Minio")
-            else:
-                for key, val in friendly_names.items():
-                    if raw_name.startswith(key):
-                        clean_name = val
-                        deployment_key = key
-                        break
-
-            # CÁLCULO DE REINICIOS TOTALES
-            pod_crash_restarts = sum(
-                c.restart_count for c in p.status.container_statuses) if p.status.container_statuses else 0
-            manual_restarts = manual_restarts_map.get(deployment_key, 0)
-            total_restarts = pod_crash_restarts + manual_restarts
-
-            pod_list.append({
-                "name": clean_name,
-                "status": p.status.phase,
-                "restarts": total_restarts,
-                "age": age,
-                "ip": p.status.pod_ip
-            })
-
-        nodes = core_v1.list_node()
-        node_metrics = []
-        for n in nodes.items:
-            raw_node_name = n.metadata.name
-            display_name = raw_node_name
-            if "docker-desktop" in raw_node_name.lower():
-                display_name = "CLUSTER-WAKANDA"
-            elif "minikube" in raw_node_name.lower():
-                display_name = "CLUSTER-MINI-WAKANDA"
-
-            cpu = n.status.allocatable.get("cpu")
-            memory = n.status.allocatable.get("memory")
-            node_metrics.append({"name": display_name, "cpu": cpu, "memory": memory})
-
-        return {"pods": pod_list, "nodes": node_metrics}
+        s3_client.upload_fileobj(
+            file.file,
+            bucket_name,
+            file_key,
+            ExtraArgs={'ContentType': file.content_type}
+        )
     except Exception as e:
-        logger.error(f"🔥 ERROR CRÍTICO EN KUBERNETES: {str(e)}")
-        return {"pods": [], "nodes": [], "error": str(e)}
+        raise HTTPException(500, f"Error al subir imagen a MinIO: {e}")
+
+    url = f"http://localhost:30009/{bucket_name}/{file_key}"
+    user.profile_pic_url = url
+    db.commit()
+
+    return {"url": url}
 
 
-@app.get("/admin/system/metrics")
-async def get_system_metrics():
-    try:
-        async with httpx.AsyncClient(timeout=2.0) as client:
-            cpu_res = await client.get(f"{PROMETHEUS_URL}/api/v1/query", params={
-                "query": 'sum(rate(container_cpu_usage_seconds_total{namespace="default"}[1m]))'})
-            mem_res = await client.get(f"{PROMETHEUS_URL}/api/v1/query",
-                                       params={"query": 'sum(container_memory_usage_bytes{namespace="default"})'})
+@app.post("/me/team")
+def change_team(team_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if user.last_team_change:
+        diff = datetime.utcnow() - user.last_team_change
+        if diff.total_seconds() < 86400:
+            raise HTTPException(400, "Espera 24 horas.")
 
-            cpu_val = float(cpu_res.json()['data']['result'][0]['value'][1]) * 100 if cpu_res.json()['data'][
-                'result'] else 0
-            mem_val = float(mem_res.json()['data']['result'][0]['value'][1]) / (1024 ** 3) if mem_res.json()['data'][
-                'result'] else 0
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team: raise HTTPException(404, "Equipo no encontrado")
 
-            return {
-                "latency_ms": random.randint(20, 150),
-                "requests_per_sec": random.randint(500, 2000),
-                "error_rate_percent": round(random.uniform(0.1, 2.5), 2),
-                "cpu_usage_percent": round(cpu_val, 2),
-                "memory_usage_percent": round(mem_val, 2),
-                "active_alerts": 0
-            }
-    except Exception:
-        return {
-            "latency_ms": random.randint(20, 150),
-            "requests_per_sec": random.randint(500, 2000),
-            "error_rate_percent": round(random.uniform(0.1, 2.5), 2),
-            "cpu_usage_percent": random.randint(30, 80),
-            "memory_usage_percent": random.randint(40, 75),
-            "active_alerts": 0
-        }
+    user.team_id = team_id
+    user.last_team_change = datetime.utcnow()
+    db.commit()
+
+    send_team_change_email(user.email, team.name, user.club_password)
+
+    return {"message": "Equipo cambiado"}
+
+
+@app.get("/me")
+def read_users_me(user: User = Depends(get_current_user)):
+    return user
+
+
+@app.get("/users")
+def get_all_users(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if user.role != "ADMIN":
+        raise HTTPException(status_code=403, detail="Requiere privilegios de administrador")
+    return db.query(User).all()
+
+
+@app.put("/users/{user_id}")
+def update_user(
+        user_id: int,
+        user_data: UserUpdate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    if current_user.id != user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="⛔ Prohibido: Solo puedes modificar tu propio perfil."
+        )
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    if user_data.username:
+        user.email = user_data.username
+
+    if user_data.password:
+        if len(user_data.password) < 8:
+            raise HTTPException(400, "La contraseña debe tener al menos 8 caracteres")
+        if not re.search(r"[A-Z]", user_data.password):
+            raise HTTPException(400, "La contraseña debe tener al menos una mayúscula")
+        if not re.search(r"\d", user_data.password):
+            raise HTTPException(400, "La contraseña debe tener al menos un número")
+        if not re.search(r"[!@#$%^&*.,]", user_data.password):
+            raise HTTPException(400, "La contraseña debe tener al menos un carácter especial")
+
+        if pwd_context.verify(user_data.password, user.hashed_password):
+            raise HTTPException(400, "La nueva contraseña no puede ser igual a la anterior")
+
+        user.hashed_password = pwd_context.hash(user_data.password)
+
+    db.commit()
+    return {"message": "Usuario actualizado correctamente"}
+
+
+@app.post("/recover/request")
+def request_password_recovery(data: RecoverRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == data.email).first()
+    if not user:
+        return {"message": "Si el correo existe, se enviará un código."}
+
+    recovery_code = str(random.randint(100000, 999999))
+    user.email_verification_code = recovery_code
+    user.email_code_expires_at = datetime.utcnow() + timedelta(minutes=15)
+    db.commit()
+
+    send_password_recovery_email(data.email, recovery_code)
+    return {"message": "Código de recuperación enviado."}
+
+
+@app.post("/recover/confirm")
+def confirm_password_recovery(data: RecoverConfirm, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == data.email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    if user.email_verification_code != data.code:
+        raise HTTPException(status_code=400, detail="Código incorrecto")
+
+    if user.email_code_expires_at and datetime.utcnow() > user.email_code_expires_at:
+        raise HTTPException(status_code=400, detail="El código ha expirado")
+
+    user.hashed_password = pwd_context.hash(data.new_password)
+    user.email_verification_code = None
+    user.email_code_expires_at = None
+    db.commit()
+
+    return {"message": "Contraseña restablecida con éxito"}
