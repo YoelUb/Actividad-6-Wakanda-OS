@@ -28,8 +28,10 @@ export default function UserProfile({ token, onLogout, onBackToHome }) {
 
     const interval = setInterval(() => {
       const lastChange = new Date(user.last_team_change);
+      // Añadimos 24h a la fecha UTC recibida
       const nextAvailable = new Date(lastChange.getTime() + 86400000);
       const now = new Date();
+
       const diff = nextAvailable - now;
 
       if (diff <= 0) {
@@ -226,12 +228,13 @@ export default function UserProfile({ token, onLogout, onBackToHome }) {
               <div className="info-label">Último Cambio de Club</div>
               <div className="info-value">
                 {user.last_team_change ?
-                  new Date(user.last_team_change).toLocaleDateString('es-ES', {
+                  new Date(user.last_team_change).toLocaleString('es-ES', {
                     day: '2-digit',
                     month: '2-digit',
                     year: 'numeric',
                     hour: '2-digit',
-                    minute: '2-digit'
+                    minute: '2-digit',
+                    timeZone: 'Europe/Madrid'
                   }) :
                   'Nunca'}
               </div>

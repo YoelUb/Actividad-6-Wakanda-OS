@@ -4,15 +4,11 @@ import random
 import logging
 from datetime import datetime, timezone, timedelta
 from kubernetes import client, config
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File
-from .resilience import fetch_from_service, post_to_service
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from .resilience import fetch_from_service, post_to_service
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[logging.StreamHandler()]
-)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("WakandaGateway")
 
 app = FastAPI(title="Wakanda API Gateway")
@@ -61,14 +57,7 @@ async def root():
 @app.get("/traffic/status")
 async def proxy_traffic():
     if check_restart_mode("ms-trafico"):
-        return {
-            "status": "⚠️ REINICIANDO SISTEMA",
-            "congestion_level": "CALIBRANDO SENSORES...",
-            "avg_speed": "---",
-            "active_drones": 0,
-            "incidents_reported": 0,
-            "db_connection": "MAINTENANCE"
-        }
+        return {"status": "RESTARTING"}
     async with httpx.AsyncClient() as client:
         return (await fetch_from_service(f"{TRAFFIC_SERVICE_URL}/traffic/status", client)).json()
 
@@ -76,14 +65,7 @@ async def proxy_traffic():
 @app.get("/energy/grid")
 async def proxy_energy():
     if check_restart_mode("ms-energia"):
-        return {
-            "status": "⚡ REINICIANDO RED",
-            "voltage_v": 0,
-            "frequency_hz": 0,
-            "vibranium_core_load": "ESTABILIZANDO...",
-            "active_turbines": 0,
-            "db_connection": "MAINTENANCE"
-        }
+        return {"status": "RESTARTING"}
     async with httpx.AsyncClient() as client:
         return (await fetch_from_service(f"{ENERGY_SERVICE_URL}/energy/grid", client)).json()
 
@@ -91,14 +73,7 @@ async def proxy_energy():
 @app.get("/water/pressure")
 async def proxy_water():
     if check_restart_mode("ms-agua"):
-        return {
-            "status": "💧 PURGANDO TUBERÍAS",
-            "pressure_psi": 0,
-            "ph_level": 0,
-            "purity_level": "ANALIZANDO...",
-            "reserve_level": "---",
-            "db_connection": "MAINTENANCE"
-        }
+        return {"status": "RESTARTING"}
     async with httpx.AsyncClient() as client:
         return (await fetch_from_service(f"{WATER_SERVICE_URL}/water/pressure", client)).json()
 
@@ -106,14 +81,7 @@ async def proxy_water():
 @app.get("/waste/status")
 async def proxy_waste():
     if check_restart_mode("ms-residuos"):
-        return {
-            "status": "♻️ REINICIANDO COMPACTADORES",
-            "trucks_active": 0,
-            "recycling_centers_online": 0,
-            "avg_bin_fill_level": "---",
-            "incinerator_temp": "ENFRIANDO...",
-            "db_connection": "MAINTENANCE"
-        }
+        return {"status": "RESTARTING"}
     async with httpx.AsyncClient() as client:
         return (await fetch_from_service(f"{WASTE_SERVICE_URL}/waste/status", client)).json()
 
@@ -121,14 +89,7 @@ async def proxy_waste():
 @app.get("/security/alerts")
 async def proxy_security():
     if check_restart_mode("ms-seguridad"):
-        return {
-            "status": "🛡️ REINICIANDO PROTOCOLOS",
-            "alert_level": "NEUTRAL",
-            "border_integrity": "ESCANEANDO...",
-            "detected_threats": 0,
-            "patrol_drones": 0,
-            "db_connection": "MAINTENANCE"
-        }
+        return {"status": "RESTARTING"}
     async with httpx.AsyncClient() as client:
         return (await fetch_from_service(f"{SECURITY_SERVICE_URL}/security/alerts", client)).json()
 
@@ -331,35 +292,26 @@ async def proxy_upload_avatar(request: Request):
 @app.post("/admin/restart/{service_name}")
 def restart_service(service_name: str):
     try:
-        logger.info(f"🔄 Activando modo mantenimiento para {service_name}")
         restarting_services[service_name] = datetime.now()
-
         try:
             config.load_incluster_config()
         except:
-            try:
-                config.load_kube_config()
-            except:
-                logger.warning("No se pudo cargar configuración de K8s. Ejecutando en modo simulación local.")
+            config.load_kube_config()
 
         v1 = client.AppsV1Api()
+        deploy = v1.read_namespaced_deployment(name=service_name, namespace="default")
+        current_restarts = int((deploy.metadata.annotations or {}).get("wakanda.os/restarts", "0"))
+        new_count = current_restarts + 1
+
         patch_body = {
-            "spec": {
-                "template": {
-                    "metadata": {
-                        "annotations": {
-                            "kubectl.kubernetes.io/restartedAt": str(datetime.now())
-                        }
-                    }
-                }
-            }
+            "metadata": {"annotations": {"wakanda.os/restarts": str(new_count)}},
+            "spec": {"template": {
+                "metadata": {"annotations": {"kubectl.kubernetes.io/restartedAt": datetime.now().isoformat()}}}}
         }
         v1.patch_namespaced_deployment(name=service_name, namespace="default", body=patch_body)
-
-        return {"status": f"Reiniciando servicio {service_name}...", "timestamp": str(datetime.now())}
+        return {"status": "Reiniciando...", "restarts": new_count}
     except Exception as e:
-        logger.error(f"⛔ FALLO AL REINICIAR {service_name}: {str(e)}")
-        return {"status": "Reinicio simulado activado (K8s no disponible)", "error": str(e)}
+        return {"status": "Error", "detail": str(e)}
 
 
 @app.get("/admin/k8s/info")
@@ -370,84 +322,69 @@ def get_k8s_info():
         except:
             config.load_kube_config()
 
-        v1 = client.CoreV1Api()
-        pods = v1.list_namespaced_pod("default")
-        pod_list = []
+        core_v1 = client.CoreV1Api()
+        apps_v1 = client.AppsV1Api()
 
-        friendly_names = {
-            "ms-trafico": "Tráfico aéreo",
-            "ms-energia": "Red vibranium",
-            "ms-agua": "Hidroeléctrica",
-            "ms-residuos": "Gestión basura",
-            "ms-seguridad": "Gestión defensa",
-            "ms-usuarios": "Gestión ciudadanos",
-            "ms-gateway": "Proxy",
-            "wakanda-frontend": "Panel de control",
-            "postgres-db": "Base de datos central",
-            "minio": "Base de datos minio",
-            "prometheus": "Sistema monitoreo"
+        manual_restarts_map = {
+            d.metadata.name: int((d.metadata.annotations or {}).get("wakanda.os/restarts", "0"))
+            for d in apps_v1.list_namespaced_deployment("default").items
         }
 
-        for p in pods.items:
-            start_time = p.status.start_time
-            age = "Recién nacido"
+        friendly_names = {
+            "ms-trafico": "Tráfico aéreo", "ms-energia": "Red vibranium", "ms-agua": "Hidroeléctrica",
+            "ms-residuos": "Gestión basura", "ms-seguridad": "Gestión defensa", "ms-usuarios": "Gestión ciudadanos",
+            "ms-gateway": "Proxy", "wakanda-frontend": "Panel de control", "postgres-db": "Base de datos central",
+            "minio": "Base de datos minio", "prometheus": "Sistema monitoreo"
+        }
 
-            if start_time:
-                now = datetime.now(timezone.utc)
-                if start_time.tzinfo:
-                    delta = now - start_time
-                else:
-                    delta = datetime.now() - start_time
+        pods_by_service = {}
 
-                total_seconds = int(delta.total_seconds())
-                hours = total_seconds // 3600
-                minutes = (total_seconds % 3600) // 60
-                age = f"{hours}h {minutes}m"
+        for p in core_v1.list_namespaced_pod("default").items:
+            if p.metadata.deletion_timestamp: continue
+
+            age = "0m"
+            if p.status.start_time:
+                delta = datetime.now(timezone.utc) - p.status.start_time
+                age = f"{int(delta.total_seconds() // 3600)}h {int(delta.total_seconds() % 3600 // 60)}m"
 
             raw_name = p.metadata.name
             clean_name = raw_name
-            parts = raw_name.split('-')
+            restarts = sum(c.restart_count for c in p.status.container_statuses or [])
 
-            if len(parts) >= 3:
-                potential_name = "-".join(parts[:-2])
-                if potential_name in friendly_names:
-                    clean_name = friendly_names[potential_name]
-                else:
-                    clean_name = potential_name
-            elif len(parts) == 2 and parts[0] == "minio":
-                clean_name = friendly_names.get("minio", "Minio")
-            else:
-                for key, val in friendly_names.items():
-                    if raw_name.startswith(key):
-                        clean_name = val
-                        break
+            matched = False
+            for dep_name, manual_count in manual_restarts_map.items():
+                if raw_name.startswith(dep_name + "-"):
+                    restarts += manual_count
+                    clean_name = friendly_names.get(dep_name, dep_name)
+                    matched = True
+                    break
 
-            pod_list.append({
+            if not matched:
+                parts = raw_name.split("-")
+                if len(parts) > 2:
+                    clean_name = friendly_names.get("-".join(parts[:-2]), raw_name)
+
+            pod_data = {
                 "name": clean_name,
                 "status": p.status.phase,
-                "restarts": sum(
-                    c.restart_count for c in p.status.container_statuses) if p.status.container_statuses else 0,
+                "restarts": restarts,
                 "age": age,
-                "ip": p.status.pod_ip
-            })
+                "ip": p.status.pod_ip,
+                "start_time": p.status.start_time
+            }
 
-        nodes = v1.list_node()
-        node_metrics = []
-        for n in nodes.items:
-            raw_node_name = n.metadata.name
-            display_name = raw_node_name
-            if "docker-desktop" in raw_node_name.lower():
-                display_name = "CLUSTER-WAKANDA"
-            elif "minikube" in raw_node_name.lower():
-                display_name = "CLUSTER-MINI-WAKANDA"
+            if clean_name not in pods_by_service:
+                pods_by_service[clean_name] = pod_data
+            else:
+                existing = pods_by_service[clean_name]
+                if p.status.start_time and existing["start_time"] and p.status.start_time > existing["start_time"]:
+                    pods_by_service[clean_name] = pod_data
 
-            cpu = n.status.allocatable.get("cpu")
-            memory = n.status.allocatable.get("memory")
-            node_metrics.append({"name": display_name, "cpu": cpu, "memory": memory})
+        nodes = [{"name": n.metadata.name, "cpu": n.status.allocatable.get("cpu"),
+                  "memory": n.status.allocatable.get("memory")} for n in core_v1.list_node().items]
 
-        return {"pods": pod_list, "nodes": node_metrics}
+        return {"pods": list(pods_by_service.values()), "nodes": nodes}
     except Exception as e:
-        logger.error(f"🔥 ERROR CRÍTICO EN KUBERNETES: {str(e)}")
         return {"pods": [], "nodes": [], "error": str(e)}
 
 
@@ -455,25 +392,22 @@ def get_k8s_info():
 async def get_system_metrics():
     try:
         async with httpx.AsyncClient(timeout=2.0) as client:
-            cpu_res = await client.get(f"{PROMETHEUS_URL}/api/v1/query", params={
+            cpu = await client.get(f"{PROMETHEUS_URL}/api/v1/query", params={
                 "query": 'sum(rate(container_cpu_usage_seconds_total{namespace="default"}[1m]))'})
-            mem_res = await client.get(f"{PROMETHEUS_URL}/api/v1/query",
-                                       params={"query": 'sum(container_memory_usage_bytes{namespace="default"})'})
-
-            cpu_val = float(cpu_res.json()['data']['result'][0]['value'][1]) * 100 if cpu_res.json()['data'][
+            mem = await client.get(f"{PROMETHEUS_URL}/api/v1/query",
+                                   params={"query": 'sum(container_memory_usage_bytes{namespace="default"})'})
+            cpu_v = float(cpu.json()['data']['result'][0]['value'][1]) * 100 if cpu.json()['data']['result'] else 0
+            mem_v = float(mem.json()['data']['result'][0]['value'][1]) / (1024 ** 3) if mem.json()['data'][
                 'result'] else 0
-            mem_val = float(mem_res.json()['data']['result'][0]['value'][1]) / (1024 ** 3) if mem_res.json()['data'][
-                'result'] else 0
-
             return {
                 "latency_ms": random.randint(20, 150),
                 "requests_per_sec": random.randint(500, 2000),
                 "error_rate_percent": round(random.uniform(0.1, 2.5), 2),
-                "cpu_usage_percent": round(cpu_val, 2),
-                "memory_usage_percent": round(mem_val, 2),
+                "cpu_usage_percent": round(cpu_v, 2),
+                "memory_usage_percent": round(mem_v, 2),
                 "active_alerts": 0
             }
-    except Exception:
+    except:
         return {
             "latency_ms": random.randint(20, 150),
             "requests_per_sec": random.randint(500, 2000),

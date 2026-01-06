@@ -14,6 +14,8 @@ export default function AdminPanel({ onExit }) {
   const [restarting, setRestarting] = useState({});
   const [k8sError, setK8sError] = useState(null);
 
+  const [currentAdmin, setCurrentAdmin] = useState(null);
+
   const [editingUser, setEditingUser] = useState(null);
   const [editForm, setEditForm] = useState({ username: '', password: '' });
 
@@ -25,16 +27,21 @@ export default function AdminPanel({ onExit }) {
     { key: 'security', url: '/security/alerts', name: 'DEFENSA FRONTERIZA', icon: '🛡️', theme: 'security', deployName: 'ms-seguridad' }
   ];
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
-  }, [activeTab]);
-
   const getAuthHeader = () => {
     const token = sessionStorage.getItem('wakanda_token');
     return token ? `Bearer ${token}` : '';
   };
+
+  useEffect(() => {
+    // Obtenemos los datos del administrador actual al cargar
+    axios.get(`${GATEWAY_URL}/me`, { headers: { Authorization: getAuthHeader() } })
+      .then(res => setCurrentAdmin(res.data))
+      .catch(err => console.error("Error identificando admin", err));
+
+    fetchData();
+    const interval = setInterval(fetchData, 5000);
+    return () => clearInterval(interval);
+  }, [activeTab]);
 
   const fetchData = async () => {
     try {
@@ -84,9 +91,9 @@ export default function AdminPanel({ onExit }) {
     setRestarting(p => ({ ...p, [deployName]: true }));
     try {
       await axios.post(`${GATEWAY_URL}/admin/restart/${deployName}`, {});
-      alert("✅ REINICIO INICIADO");
+      alert("✅ REINICIO INICIADO\nSistema en modo mantenimiento temporal.");
     } catch (e) {
-      alert("❌ Error: Gateway sin permisos RBAC");
+      alert("❌ ERROR DE COMANDO\nEl Gateway no tiene permisos RBAC suficientes.");
     } finally {
       setTimeout(() => setRestarting(p => ({ ...p, [deployName]: false })), 5000);
     }
@@ -95,14 +102,22 @@ export default function AdminPanel({ onExit }) {
   const handleUpdateUser = async (e) => {
     e.preventDefault();
 
+    const emailChanged = editForm.username !== editingUser.email;
+    const passwordProvided = editForm.password && editForm.password.trim() !== '';
+
     if (!editForm.username.endsWith('@wakanda.es')) {
-        alert("❌ RESTRICCIÓN DE SEGURIDAD: El administrador solo puede asignar correos oficiales del dominio @wakanda.es");
+        alert("🛡️ PROTOCOLO DE SEGURIDAD\n\nAcción denegada: El correo debe pertenecer al dominio oficial @wakanda.es");
+        return;
+    }
+
+    if (emailChanged && !passwordProvided) {
+        alert("⚠️ ACTUALIZACIÓN INCOMPLETA\n\nPor motivos de seguridad, al cambiar el identificador (Email), es OBLIGATORIO establecer una nueva contraseña.");
         return;
     }
 
     const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*.,]).{8,}$/;
-    if (editForm.password && !passwordRegex.test(editForm.password)) {
-        alert("❌ SEGURIDAD DÉBIL: La contraseña debe tener al menos 8 caracteres, una mayúscula, un número y un carácter especial (!@#$%^&*.,).");
+    if (passwordProvided && !passwordRegex.test(editForm.password)) {
+        alert("🔐 CONTRASEÑA INSEGURA\n\nLa nueva contraseña no cumple los estándares de Wakanda:\n\n- Mínimo 8 caracteres\n- Al menos 1 mayúscula\n- Al menos 1 número\n- Al menos 1 carácter especial (!@#$%^&*.,)");
         return;
     }
 
@@ -110,12 +125,12 @@ export default function AdminPanel({ onExit }) {
       await axios.put(`${GATEWAY_URL}/users/${editingUser.id}`, editForm, {
         headers: { Authorization: getAuthHeader() }
       });
-      alert("✅ Credenciales actualizadas correctamente");
+      alert("CREDENCIALES ACTUALIZADAS\n\nEl perfil del ciudadano ha sido modificado correctamente.");
       setEditingUser(null);
       fetchData();
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || "Error al actualizar usuario";
-      alert(`❌ ${errorMsg}`);
+      const errorMsg = error.response?.data?.detail || "Error desconocido en el sistema.";
+      alert(`OPERACIÓN FALLIDA\n\n${errorMsg}`);
     }
   };
 
@@ -351,16 +366,20 @@ export default function AdminPanel({ onExit }) {
                                 }
                             </td>
                             <td>
-                              <button
-                                className="cyber-btn-exit"
-                                style={{padding: '5px 10px', fontSize: '0.8rem'}}
-                                onClick={() => {
-                                  setEditingUser(u);
-                                  setEditForm({ username: u.email, password: '' });
-                                }}
-                              >
-                                ✏️ EDITAR
-                              </button>
+                              {currentAdmin && currentAdmin.id === u.id ? (
+                                <button
+                                  className="cyber-btn-exit"
+                                  style={{padding: '5px 10px', fontSize: '0.8rem', borderColor: 'var(--neon-blue)', color: 'var(--neon-blue)'}}
+                                  onClick={() => {
+                                    setEditingUser(u);
+                                    setEditForm({ username: u.email, password: '' });
+                                  }}
+                                >
+                                  EDITAR
+                                </button>
+                              ) : (
+                                <span style={{color: '#666', fontSize: '0.8rem'}}> BLOQUEADO </span>
+                              )}
                             </td>
                           </tr>
                         ))}

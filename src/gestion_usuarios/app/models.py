@@ -42,3 +42,10 @@ class User(Base):
     verification_date = Column(DateTime, nullable=True)
 
     club_password = Column(String, nullable=True)
+
+class PasswordHistory(Base):
+    __tablename__ = "password_history"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    hashed_password = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
