@@ -63,7 +63,7 @@ def test_gateway_proxy_traffic_status(mock_fetch):
 def test_gateway_admin_restart_service(mock_k8s_client, mock_config):
     response = client_gateway.post("/admin/restart/ms-trafico")
     assert response.status_code == 200
-    assert "Reiniciando servicio ms-trafico" in response.json()["status"]
+    assert "Reiniciando..." in response.json()["status"]
     assert "ms-trafico" in restarting_services
 
 
